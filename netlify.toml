@@ -1,5 +1,9 @@
 [build]
-command = "rustup default stable && cargo doc --all-features --color always --no-deps && mv target/doc docs"
+# using rust in netlify is a bit of a hassle, as we need to first install rust,
+# then afterwards move the target directory so it's an immediate sub-directory
+# of the current directory. Not really all that big a deal, but it doesn't
+# allow for much caching, and it's not documented anywhere.
+command = "rustup default stable && cargo doc --all-features --color always --no-deps && cp -r target/doc docs"
 publish = "docs"
 
 [[redirects]]
