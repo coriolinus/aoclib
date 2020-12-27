@@ -2,11 +2,19 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 use thiserror::Error;
 
+/// Path to the configuration file.
 pub fn path() -> PathBuf {
     dirs::config_dir()
         .expect("advent of code must be run by a user with a home directory")
         .join("adventofcode")
         .join("config.toml")
+}
+
+/// Path to general purpose data directory.
+pub fn data() -> PathBuf {
+    dirs::data_dir()
+        .expect("data directory is discoverable")
+        .join("adventofcode")
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -25,6 +33,9 @@ pub struct Paths {
 
     /// Path to this years's implementation directory
     pub implementation: Option<PathBuf>,
+
+    /// Path to this year's day template files
+    pub day_template: Option<PathBuf>,
 }
 
 impl Config {
@@ -88,6 +99,23 @@ impl Config {
     /// Set the implementation directory for `year`.
     pub fn set_implementation(&mut self, year: u32, path: PathBuf) {
         self.paths.entry(year).or_default().implementation = Some(path);
+    }
+
+    fn day_template_inner(&self, year: u32) -> Option<PathBuf> {
+        Some(self.paths.get(&year)?.day_template.as_ref()?.to_owned())
+    }
+
+    /// Path to the template which will be applied for each day for `year`.
+    pub fn day_template(&self, year: u32) -> PathBuf {
+        match self.day_template_inner(year) {
+            Some(day_template) => day_template,
+            None => data().join(year.to_string()).join("day-template"),
+        }
+    }
+
+    /// Set the day template directory for `year`
+    pub fn set_day_template(&mut self, year: u32, path: PathBuf) {
+        self.paths.entry(year).or_default().day_template = Some(path);
     }
 }
 
