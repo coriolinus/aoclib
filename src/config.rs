@@ -22,6 +22,9 @@ pub struct Config {
 pub struct Paths {
     /// Path to input files
     pub input_files: Option<PathBuf>,
+
+    /// Path to this years's implementation directory
+    pub implementation: Option<PathBuf>,
 }
 
 impl Config {
@@ -45,17 +48,46 @@ impl Config {
         Some(self.paths.get(&year)?.input_files.as_ref()?.to_owned())
     }
 
+    /// Path to the configured input files directory for `year`.
+    ///
+    /// If not configured for `year`, returns the "inputs"
+    /// sub-folder of that year's implementation directory.
     pub fn input_files(&self, year: u32) -> PathBuf {
         match self.input_files_inner(year) {
             Some(input_files) => input_files,
-            None => std::env::current_dir()
-                .expect("current dir is sane")
-                .join("inputs"),
+            None => self.implementation(year).join("inputs"),
         }
     }
 
     pub fn input_for(&self, year: u32, day: u8) -> PathBuf {
         self.input_files(year).join(format!("input-{:02}.txt", day))
+    }
+
+    /// Set the input files directory for `year`.
+    pub fn set_input_files(&mut self, year: u32, path: PathBuf) {
+        self.paths.entry(year).or_default().input_files = Some(path);
+    }
+
+    fn implementation_inner(&self, year: u32) -> Option<PathBuf> {
+        Some(self.paths.get(&year)?.implementation.as_ref()?.to_owned())
+    }
+
+    /// Path to the implementation directory for `year`.
+    ///
+    /// If not configured for `year`, returns the current directory.
+    ///
+    /// Panics if the system cannot locate the current directory, the
+    /// current directory does not exist, or other unlikely scenarios.
+    pub fn implementation(&self, year: u32) -> PathBuf {
+        match self.implementation_inner(year) {
+            Some(implementation) => implementation,
+            None => std::env::current_dir().expect("current dir is sane"),
+        }
+    }
+
+    /// Set the implementation directory for `year`.
+    pub fn set_implementation(&mut self, year: u32, path: PathBuf) {
+        self.paths.entry(year).or_default().implementation = Some(path);
     }
 }
 
