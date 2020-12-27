@@ -53,7 +53,7 @@ impl Vector4 {
     /// help for computing an inclusive range. For example, it is true that
     ///
     /// ```rust
-    /// # use aoc2020::geometry::vector3::Vector4;
+    /// # use aoclib::geometry::vector3::Vector4;
     /// let a = Vector4::new(-1, -1, -1, 0);
     /// let b = Vector4::new(0, -3, -1, 0);
     /// assert!(a < b);
@@ -63,7 +63,7 @@ impl Vector4 {
     /// contains both `self` and `other`:
     ///
     /// ```rust
-    /// # use aoc2020::geometry::vector3::Vector4;
+    /// # use aoclib::geometry::vector3::Vector4;
     /// let a = Vector4::new(-1, -1, -1, 0);
     /// let b = Vector4::new(0, -3, -1, 0);
     /// assert_eq!(a.boundary_min(b), Vector4::new(-1, -3, -1, 0));
@@ -83,7 +83,7 @@ impl Vector4 {
     /// help for computing an inclusive range. For example, it is true that
     ///
     /// ```rust
-    /// # use aoc2020::geometry::vector3::Vector4;
+    /// # use aoclib::geometry::vector3::Vector4;
     /// let a = Vector4::new(1, 1, 1, 0);
     /// let b = Vector4::new(0, 3, 1, 0);
     /// assert!(a > b);
@@ -93,7 +93,7 @@ impl Vector4 {
     /// contains both `self` and `other`:
     ///
     /// ```rust
-    /// # use aoc2020::geometry::vector3::Vector4;
+    /// # use aoclib::geometry::vector3::Vector4;
     /// let a = Vector4::new(1, 1, 1, 0);
     /// let b = Vector4::new(0, 3, 1, 0);
     /// assert_eq!(a.boundary_max(b), Vector4::new(1, 3, 1, 0));

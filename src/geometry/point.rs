@@ -37,7 +37,7 @@ impl Point {
     /// For example:
     ///
     /// ```
-    /// # use aoc2020::geometry::Point;
+    /// # use aoclib::geometry::Point;
     /// let mut point = Point::new(2, 1);
     /// point = point.rotate_right();
     /// assert_eq!(point, Point::new(1, -2));
@@ -57,7 +57,7 @@ impl Point {
     /// For example:
     ///
     /// ```
-    /// # use aoc2020::geometry::Point;
+    /// # use aoclib::geometry::Point;
     /// let mut point = Point::new(2, 1);
     /// point = point.rotate_left();
     /// assert_eq!(point, Point::new(-1, 2));

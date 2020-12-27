@@ -6,7 +6,7 @@ pub fn path() -> PathBuf {
     dirs::config_dir()
         .expect("advent of code must be run by a user with a home directory")
         .join("adventofcode")
-        .join("2020.toml")
+        .join("config.toml")
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -38,13 +38,9 @@ impl Config {
     pub fn input_files(&self) -> PathBuf {
         match self.input_files {
             Some(ref input_files) => input_files.to_owned(),
-            None => match std::env::current_dir() {
-                Ok(current) => current.join("inputs"),
-                Err(_) => dirs::data_dir()
-                    .expect("advent of code must be run by a user with a home directory")
-                    .join("adventofcode")
-                    .join("2020"),
-            },
+            None => std::env::current_dir()
+                .expect("current dir is sane")
+                .join("inputs"),
         }
     }
 
