@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use thiserror::Error;
 
 pub fn path() -> PathBuf {
@@ -14,6 +14,12 @@ pub struct Config {
     /// Session cookie
     pub session: String,
 
+    /// Paths are independently configured per year.
+    pub paths: HashMap<u32, Paths>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct Paths {
     /// Path to input files
     pub input_files: Option<PathBuf>,
 }
@@ -35,17 +41,21 @@ impl Config {
         toml::de::from_slice(&data).map_err(Into::into)
     }
 
-    pub fn input_files(&self) -> PathBuf {
-        match self.input_files {
-            Some(ref input_files) => input_files.to_owned(),
+    fn input_files_inner(&self, year: u32) -> Option<PathBuf> {
+        Some(self.paths.get(&year)?.input_files.as_ref()?.to_owned())
+    }
+
+    pub fn input_files(&self, year: u32) -> PathBuf {
+        match self.input_files_inner(year) {
+            Some(input_files) => input_files,
             None => std::env::current_dir()
                 .expect("current dir is sane")
                 .join("inputs"),
         }
     }
 
-    pub fn input_for(&self, day: u8) -> PathBuf {
-        self.input_files().join(format!("input-{:02}.txt", day))
+    pub fn input_for(&self, year: u32, day: u8) -> PathBuf {
+        self.input_files(year).join(format!("input-{:02}.txt", day))
     }
 }
 

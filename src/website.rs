@@ -15,7 +15,7 @@ pub fn input_url_for_day(year: u32, day: u8) -> String {
 ///
 /// If the file already exists, silently does nothing. This prevents server spam.
 pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
-    let input_path = config.input_for(day);
+    let input_path = config.input_for(year, day);
     if input_path.exists() {
         return Ok(());
     }
