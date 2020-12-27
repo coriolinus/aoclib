@@ -2,19 +2,19 @@ use crate::config::Config;
 use thiserror::Error;
 
 /// Generate the puzzle URL for a given day
-pub fn url_for_day(day: u8) -> String {
-    format!("https://adventofcode.com/{}/day/{}", 2020, day)
+pub fn url_for_day(year: u32, day: u8) -> String {
+    format!("https://adventofcode.com/{}/day/{}", year, day)
 }
 
 /// Generate the input URL for a given day
-pub fn input_url_for_day(day: u8) -> String {
-    format!("{}/input", url_for_day(day))
+pub fn input_url_for_day(year: u32, day: u8) -> String {
+    format!("{}/input", url_for_day(year, day))
 }
 
 /// Download the day's input file
 ///
 /// If the file already exists, silently does nothing. This prevents server spam.
-pub fn get_input(config: &Config, day: u8) -> Result<(), Error> {
+pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
     let input_path = config.input_for(day);
     if input_path.exists() {
         return Ok(());
@@ -27,7 +27,7 @@ pub fn get_input(config: &Config, day: u8) -> Result<(), Error> {
         .map_err(Error::ClientBuilder)?;
 
     let mut response = client
-        .get(&input_url_for_day(day))
+        .get(&input_url_for_day(year, day))
         .header(
             reqwest::header::COOKIE,
             format!("session={}", config.session),
