@@ -1,5 +1,7 @@
 # `aoclib`: Utilities convenient for Advent of Code solutions
 
+[Documentation](https://aoclib-docs.netlify.app/aoclib/)
+
 In general, this is intended to provide library support in two broad aspects:
 interacting with AoC itself, and making it easier to write solutions.
 It is split into several modules to support this.
