@@ -1,0 +1,7 @@
+[build]
+command = "rustup default stable && cargo doc --all-features --color always --no-deps && mv target/doc docs"
+publish = "target/doc"
+
+[[redirects]]
+from = "/"
+to = "/aoclib/"

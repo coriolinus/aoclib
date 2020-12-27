@@ -3,6 +3,7 @@ name = "aoclib"
 version = "0.1.0"
 authors = ["Peter Goodspeed-Niklaus <peter.r.goodspeedniklaus@gmail.com>"]
 edition = "2018"
+documentation = "https://aoclib-docs.netlify.app/aoclib/"
 
 [dependencies]
 bitvec = "0.20.1"
