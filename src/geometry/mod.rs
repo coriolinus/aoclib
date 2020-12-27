@@ -1,4 +1,5 @@
 pub mod direction;
+pub mod hex;
 pub mod line;
 pub mod line_segment;
 pub mod map;
