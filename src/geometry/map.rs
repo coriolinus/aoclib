@@ -525,6 +525,8 @@ where
 
     /// Render this map as a still image into an output file.
     ///
+    /// _Depends on the `map-render` feature._
+    ///
     /// The output image is a gif under all circumstances. It is useful, though
     /// unenforced, that the output file name matches `*.gif`.
     pub fn render(&self, output: &Path) -> Result<(), RenderError> {
@@ -532,6 +534,8 @@ where
     }
 
     /// Render this map as a still image into an output file, with sparkles.
+    ///
+    /// _Depends on the `map-render` feature._
     ///
     /// The output image is a gif under all circumstances. It is useful, though
     /// unenforced, that the output file name matches `*.gif`.
@@ -545,6 +549,8 @@ where
     }
 
     /// Prepare an animation from this map.
+    ///
+    /// _Depends on the `map-render` feature._
     ///
     /// This returns an `Animation` object which can have frames added to it.
     /// This method does not automatically render this `Map` frame to the `Animation`.
@@ -566,6 +572,9 @@ where
     }
 }
 
+/// An error which can arise during rendering.
+///
+/// _Depends on the `map-render` feature._
 #[cfg(feature = "map-render")]
 #[derive(Debug, thiserror::Error)]
 pub enum RenderError {

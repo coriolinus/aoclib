@@ -95,6 +95,8 @@ pub type Encoder = gif::Encoder<std::io::BufWriter<std::fs::File>>;
 
 /// An `Animation` holds a handle to an unfinished gif animation.
 ///
+/// _Depends on the `map-render` feature._
+///
 /// It is created with [`Map::prepare_animation`].
 ///
 /// The gif is finalized when this struct is dropped.
