@@ -1,5 +1,7 @@
 #[cfg(feature = "map-render")]
 mod render;
+#[cfg(feature = "map-render")]
+pub use render::Animation;
 
 use crate::geometry::{tile::DisplayWidth, Direction, Point};
 use bitvec::bitvec;
@@ -13,6 +15,8 @@ use std::str::FromStr;
 use crate::geometry::tile::ToRgb;
 #[cfg(feature = "map-render")]
 use std::path::Path;
+#[cfg(feature = "map-render")]
+use std::time::Duration;
 
 /// A Map keeps track of a tile grid.
 ///
@@ -498,10 +502,7 @@ where
         gif::Frame::from_rgb(pixel_width(width), pixel_height(self.height), &subpixels)
     }
 
-    fn make_gif_encoder(
-        &self,
-        output: &Path,
-    ) -> Result<gif::Encoder<std::io::BufWriter<std::fs::File>>, RenderError> {
+    fn make_gif_encoder(&self, output: &Path) -> Result<render::Encoder, RenderError> {
         use render::{pixel_height, pixel_width};
 
         let output = std::fs::File::create(output)?;
@@ -541,6 +542,27 @@ where
     /// with the overall image aesthetic.
     pub fn render_sparkle(&self, output: &Path) -> Result<(), RenderError> {
         self.render_inner(output, true)
+    }
+
+    /// Prepare an animation from this map.
+    ///
+    /// This returns an `Animation` object which can have frames added to it.
+    /// This method does not automatically render this `Map` frame to the `Animation`.
+    /// This enables you to set up the animation ahead of time with dummy data.
+    ///
+    /// The major constraint is that all subsequent maps added as frames must
+    /// have dimensions identical to this Map's.
+    ///
+    /// The animation will loop infinitely, displaying each frame for
+    /// `frame_duration`.
+    pub fn prepare_animation(
+        &self,
+        output: &Path,
+        frame_duration: Duration,
+    ) -> Result<Animation, RenderError> {
+        let encoder = self.make_gif_encoder(output)?;
+        let animation = Animation::new(encoder, frame_duration)?;
+        Ok(animation)
     }
 }
 

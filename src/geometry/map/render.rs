@@ -1,7 +1,6 @@
-use crate::geometry::{tile::ToRgb, Point};
+use crate::geometry::{tile::ToRgb, Map, Point};
 use rand::Rng as _;
-// use std::time::Duration;
-// use std::{convert::TryFrom, path::Path};
+use std::time::Duration;
 
 /// If `sparkle`, each lit point illuminates 5 pixels in the shape of a cross, plus
 /// up to 4 more, chosen randomly, which form a sparkling effect
@@ -74,17 +73,66 @@ pub fn render_point<Tile: ToRgb>(
     }
 }
 
-// each light is 4px wide, with a 2px margin on either side
+/// Each tile is 4px wide, with a 2px margin on the outside edges of the image.
 pub fn pixel_width(width: usize) -> u16 {
     ((width + 1) * 4) as u16
 }
 
-// each light is 4px high, with a 2px margin on either side
+/// Each tile is 4px high, with a 2px margin on the outside edges of the image.
 pub fn pixel_height(height: usize) -> u16 {
     ((height + 1) * 4) as u16
 }
 
-// total pixels
+/// Total pixels in an image for a map
+///
+/// Each tile is 4px high and 4px wide, with a 2px margin on the outside
+/// edges of the image.
 pub fn n_pixels_for(width: usize, height: usize) -> usize {
     pixel_width(width) as usize * pixel_height(height) as usize
+}
+
+pub type Encoder = gif::Encoder<std::io::BufWriter<std::fs::File>>;
+
+/// An `Animation` holds a handle to an unfinished gif animation.
+///
+/// It is created with [`Map::prepare_animation`].
+///
+/// The gif is finalized when this struct is dropped.
+pub struct Animation {
+    encoder: Encoder,
+}
+
+impl Animation {
+    /// Create a new animation from an encoder and frame duration.
+    ///
+    /// This animation will repeat infinitely, displaying each frame for
+    /// `frame_duration`.
+    pub(crate) fn new(
+        mut encoder: Encoder,
+        frame_duration: Duration,
+    ) -> Result<Animation, gif::EncodingError> {
+        encoder.set_repeat(gif::Repeat::Infinite)?;
+
+        // delay is set in hundredths of a second
+        encoder.write_extension(gif::ExtensionData::new_control_ext(
+            (frame_duration.as_millis() / 10) as u16,
+            gif::DisposalMethod::Any,
+            false,
+            None,
+        ))?;
+
+        Ok(Animation { encoder })
+    }
+
+    /// Write a frame to this animation.
+    ///
+    /// This frame will be visible for the duration specified at the animation's
+    /// creation.
+    pub fn write_frame<Tile: ToRgb>(
+        &mut self,
+        map: &Map<Tile>,
+        sparkle: bool,
+    ) -> Result<(), gif::EncodingError> {
+        self.encoder.write_frame(&map.render_frame(sparkle))
+    }
 }
