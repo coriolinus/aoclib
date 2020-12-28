@@ -34,6 +34,13 @@ impl<'a, T: DisplayWidth> Iterator for Chunks<'a, T> {
     }
 }
 
+/// A type implementing `ToRgb` can be converted to a single color.
+///
+/// This is useful for rendering map tiles.
+pub trait ToRgb {
+    fn to_rgb(&self) -> [u8; 3];
+}
+
 /// A Tile which is compatible with booleans
 #[derive(
     Clone,
@@ -96,6 +103,17 @@ impl From<bool> for Bool {
             Bool::True
         } else {
             Bool::False
+        }
+    }
+}
+
+impl ToRgb for Bool {
+    fn to_rgb(&self) -> [u8; 3] {
+        if (*self).into() {
+            // warm white
+            [253, 244, 220]
+        } else {
+            [0, 0, 0]
         }
     }
 }
