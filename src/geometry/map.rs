@@ -1,3 +1,6 @@
+#[cfg(feature = "map-render")]
+mod render;
+
 use crate::geometry::{tile::DisplayWidth, Direction, Point};
 use bitvec::bitvec;
 use std::collections::{BinaryHeap, HashMap, VecDeque};
@@ -5,6 +8,11 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
+
+#[cfg(feature = "map-render")]
+use crate::geometry::tile::ToRgb;
+#[cfg(feature = "map-render")]
+use std::path::Path;
 
 /// A Map keeps track of a tile grid.
 ///
@@ -460,6 +468,89 @@ where
         }
         Ok(())
     }
+}
+
+#[cfg(feature = "map-render")]
+impl<Tile> Map<Tile>
+where
+    Tile: ToRgb,
+{
+    fn make_point_renderer<'a>(
+        &self,
+        subpixels: &'a mut [u8],
+        sparkle: bool,
+    ) -> impl 'a + FnMut(&Tile, Point) {
+        let width = self.width;
+        move |tile: &Tile, point: Point| {
+            render::render_point(point, tile, subpixels, width, sparkle);
+        }
+    }
+
+    /// Render this map as a [`gif::Frame`].
+    pub(crate) fn render_frame(&self, sparkle: bool) -> gif::Frame {
+        use render::{n_pixels_for, pixel_height, pixel_width};
+
+        // 16 pixels per light: 3x3 with a 1px margin
+        // 3 subpixels per pixel; 1 each for r, g, b
+        let width = self.width;
+        let mut subpixels = vec![0; n_pixels_for(self.width, self.height) * 3];
+        self.for_each_point(self.make_point_renderer(&mut subpixels, sparkle));
+        gif::Frame::from_rgb(pixel_width(width), pixel_height(self.height), &subpixels)
+    }
+
+    fn make_gif_encoder(
+        &self,
+        output: &Path,
+    ) -> Result<gif::Encoder<std::io::BufWriter<std::fs::File>>, RenderError> {
+        use render::{pixel_height, pixel_width};
+
+        let output = std::fs::File::create(output)?;
+        let output = std::io::BufWriter::new(output);
+
+        gif::Encoder::new(
+            output,
+            pixel_width(self.width),
+            pixel_height(self.height),
+            &[],
+        )
+        .map_err(Into::into)
+    }
+
+    fn render_inner(&self, output: &Path, sparkle: bool) -> Result<(), RenderError> {
+        let mut output = self.make_gif_encoder(output)?;
+        output.write_frame(&self.render_frame(sparkle))?;
+        Ok(())
+    }
+
+    /// Render this map as a still image into an output file.
+    ///
+    /// The output image is a gif under all circumstances. It is useful, though
+    /// unenforced, that the output file name matches `*.gif`.
+    pub fn render(&self, output: &Path) -> Result<(), RenderError> {
+        self.render_inner(output, false)
+    }
+
+    /// Render this map as a still image into an output file, with sparkles.
+    ///
+    /// The output image is a gif under all circumstances. It is useful, though
+    /// unenforced, that the output file name matches `*.gif`.
+    ///
+    /// The sparkle effect works by replacing randomly chosen corners of each
+    /// tile with black. Corners are chosen independently with probability `0.5`.
+    /// This effect works best when randomly chosen black corners do not conflict
+    /// with the overall image aesthetic.
+    pub fn render_sparkle(&self, output: &Path) -> Result<(), RenderError> {
+        self.render_inner(output, true)
+    }
+}
+
+#[cfg(feature = "map-render")]
+#[derive(Debug, thiserror::Error)]
+pub enum RenderError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error("encoding gif")]
+    Gif(#[from] gif::EncodingError),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
