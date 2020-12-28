@@ -23,5 +23,6 @@ Non-exhaustive list; see documentation for more.
 
 ## Features
 
-This module is not currently split into distinct features. Depending on observed
-compile times, that may change in the future.
+The following features exist:
+
+- `map-render`: enables rendering still frames and animations from a map whose tiles implement `ToRgb`. Disabled by default.
