@@ -19,7 +19,7 @@ of any year gets abstracted into an appropriate module here.
 
 Non-exhaustive list; see documentation for more.
 
-- [`aoclib::geometry`](https://aoclib-docs.netlify.app/aoclib/geometry/index.html): general support modunle for 2d geometry
+- [`aoclib::geometry`](https://aoclib-docs.netlify.app/aoclib/geometry/index.html): general support module for 2d geometry
 
 ## Features
 
