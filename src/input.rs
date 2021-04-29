@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File};
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
@@ -10,13 +10,40 @@ use std::str::FromStr;
 /// are trimmed before being handed to the parser.
 ///
 /// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
-pub fn parse<T>(path: &Path) -> std::io::Result<impl '_ + Iterator<Item = T>>
+pub fn parse<'a, T>(path: &'a Path) -> std::io::Result<impl 'a + Iterator<Item = T>>
 where
-    T: FromStr,
+    T: 'a + FromStr,
     <T as FromStr>::Err: std::fmt::Display,
 {
     let file = File::open(path)?;
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
+    parse_reader(
+        reader,
+        path.file_name()
+            .expect("File::open() didn't early return before now; qed")
+            .to_string_lossy(),
+    )
+}
+
+/// Parse the contents of the provided reader into a stream of `T`.
+///
+/// Each line is treated as a separate record. Leading and trailing spaces
+/// are trimmed before being handed to the parser.
+///
+/// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
+///
+/// The file name can technically be anything which is `'a + Display`, but it's used within
+/// error messages as the file name, so it should be reasonably interprable as such.
+pub fn parse_reader<'a, T, Reader, Filename>(
+    mut reader: Reader,
+    file_name: Filename,
+) -> std::io::Result<impl 'a + Iterator<Item = T>>
+where
+    T: FromStr,
+    <T as FromStr>::Err: std::fmt::Display,
+    Reader: 'a + BufRead,
+    Filename: 'a + std::fmt::Display,
+{
     let mut buf = String::new();
     let mut line: usize = 0;
     Ok(std::iter::from_fn(move || {
@@ -29,15 +56,7 @@ where
                 match T::from_str(&buf.trim()) {
                     Ok(t) => Some(t),
                     Err(e) => {
-                        eprintln!(
-                            "{}:{}: {} for {:?}",
-                            path.file_name()
-                                .expect("File::open() didn't early return before now; qed")
-                                .to_string_lossy(),
-                            line,
-                            e,
-                            buf,
-                        );
+                        eprintln!("{}:{}: {} for {:?}", file_name, line, e, buf);
                         None
                     }
                 }
