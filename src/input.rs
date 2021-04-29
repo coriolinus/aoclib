@@ -1,4 +1,4 @@
-use std::{fs::File};
+use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
@@ -26,6 +26,8 @@ where
 }
 
 /// Parse the contents of the provided reader into a stream of `T`.
+///
+/// Often [`parse`] or [`test_parse`] are more ergonomic.
 ///
 /// Each line is treated as a separate record. Leading and trailing spaces
 /// are trimmed before being handed to the parser.
@@ -75,13 +77,42 @@ where
 /// handed to the parser.
 ///
 /// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
-pub fn parse_newline_sep<T>(path: &Path) -> std::io::Result<impl '_ + Iterator<Item = T>>
+pub fn parse_newline_sep<'a, T>(path: &'a Path) -> std::io::Result<impl 'a + Iterator<Item = T>>
 where
-    T: FromStr,
+    T: 'a + FromStr,
     <T as FromStr>::Err: std::fmt::Display,
 {
     let file = File::open(path)?;
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
+    parse_newline_sep_reader(
+        reader,
+        path.file_name()
+            .expect("File::open() didn't early return before now; qed")
+            .to_string_lossy(),
+    )
+}
+
+/// Parse the contents of the provided reader into a stream of `T`.
+///
+/// Often [`parse_newline_sep`] or [`test_parse_newline_sep`] are more ergonomic.
+///
+/// Lines are batched into clusters separated by blank lines. Once a cluster has been
+/// collected, it (and internal newlines) are parsed into a `T` instance.
+///
+/// As whitespace is potentially significant, it is not adjusted in any way before being
+/// handed to the parser.
+///
+/// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
+pub fn parse_newline_sep_reader<'a, T, Reader, Filename>(
+    mut reader: Reader,
+    file_name: Filename,
+) -> std::io::Result<impl 'a + Iterator<Item = T>>
+where
+    T: FromStr,
+    <T as FromStr>::Err: std::fmt::Display,
+    Reader: 'a + BufRead,
+    Filename: 'a + std::fmt::Display,
+{
     let mut buf = String::new();
     let mut line: usize = 0;
 
@@ -110,15 +141,7 @@ where
             match T::from_str(&buf) {
                 Ok(t) => Some(t),
                 Err(e) => {
-                    eprintln!(
-                        "{}:{}: {} for {:?}",
-                        path.file_name()
-                            .expect("File::open() didn't early return before now; qed")
-                            .to_string_lossy(),
-                        line - 1,
-                        e,
-                        buf,
-                    );
+                    eprintln!("{}:{}: {} for {:?}", file_name, line - 1, e, buf,);
                     None
                 }
             }
