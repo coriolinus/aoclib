@@ -1,8 +1,10 @@
-use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 use std::str::FromStr;
+use std::{fs::File, io::Cursor};
+
+const TEST_DATA_FILENAME: &str = "TEST DATA";
 
 /// Parse the file at the specified path into a stream of `T`.
 ///
@@ -10,6 +12,8 @@ use std::str::FromStr;
 /// are trimmed before being handed to the parser.
 ///
 /// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
+///
+/// See also [`parse_str`] for equivalent functionality for strings, useful for test data.
 pub fn parse<'a, T>(path: &'a Path) -> std::io::Result<impl 'a + Iterator<Item = T>>
 where
     T: 'a + FromStr,
@@ -25,9 +29,25 @@ where
     )
 }
 
+/// Parse the provided data into a stream of `T`.
+///
+/// Each line is treated as a separate record. Leading and trailing spaces
+/// are trimmed before being handed to the parser.
+///
+/// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
+///
+/// See also [`parse`] for equivalent functionality for input files.
+pub fn parse_str<'a, T>(data: &'a str) -> std::io::Result<impl '_ + Iterator<Item = T>>
+where
+    T: 'a + FromStr,
+    <T as FromStr>::Err: std::fmt::Display,
+{
+    parse_reader(Cursor::new(data), TEST_DATA_FILENAME)
+}
+
 /// Parse the contents of the provided reader into a stream of `T`.
 ///
-/// Often [`parse`] or [`test_parse`] are more ergonomic.
+/// Often [`parse`] or [`parse_str`] are more ergonomic.
 ///
 /// Each line is treated as a separate record. Leading and trailing spaces
 /// are trimmed before being handed to the parser.
@@ -77,6 +97,8 @@ where
 /// handed to the parser.
 ///
 /// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
+///
+/// See also [`parse_newline_sep_str`] for equivalent functionality for strings, useful for test data.
 pub fn parse_newline_sep<'a, T>(path: &'a Path) -> std::io::Result<impl 'a + Iterator<Item = T>>
 where
     T: 'a + FromStr,
@@ -92,9 +114,28 @@ where
     )
 }
 
+/// Parse the provided data into a stream of `T`.
+///
+/// Lines are batched into clusters separated by blank lines. Once a cluster has been
+/// collected, it (and internal newlines) are parsed into a `T` instance.
+///
+/// As whitespace is potentially significant, it is not adjusted in any way before being
+/// handed to the parser.
+///
+/// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
+///
+/// See also [`parse_newline_sep`] for equivalent functionality for input files.
+pub fn parse_newline_sep_str<'a, T>(data: &'a str) -> std::io::Result<impl 'a + Iterator<Item = T>>
+where
+    T: 'a + FromStr,
+    <T as FromStr>::Err: std::fmt::Display,
+{
+    parse_newline_sep_reader(Cursor::new(data), TEST_DATA_FILENAME)
+}
+
 /// Parse the contents of the provided reader into a stream of `T`.
 ///
-/// Often [`parse_newline_sep`] or [`test_parse_newline_sep`] are more ergonomic.
+/// Often [`parse_newline_sep`] or [`parse_newline_sep_str`] are more ergonomic.
 ///
 /// Lines are batched into clusters separated by blank lines. Once a cluster has been
 /// collected, it (and internal newlines) are parsed into a `T` instance.
