@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use std::{collections::HashMap, path::PathBuf};
 use thiserror::Error;
 
@@ -17,12 +18,14 @@ pub fn data() -> PathBuf {
         .join("adventofcode")
 }
 
+#[serde_as]
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Config {
     /// Session cookie
     pub session: String,
 
     /// Paths are independently configured per year.
+    #[serde_as(as = "HashMap<DisplayFromStr, _>")]
     pub paths: HashMap<u32, Paths>,
 }
 
@@ -127,4 +130,43 @@ pub enum Error {
     Malformed(#[from] toml::de::Error),
     #[error("failed to serialize")]
     CouldNotSerialize(#[from] toml::ser::Error),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_deserialize() {
+        const TOML_DATA: &str = r#"
+session = "I'm a session key!"
+
+[paths.1984]
+implementation = "/aoc/was/definitely/a/thing"
+
+[paths.5555]
+implementation = "/what/future"
+input_files = "/what/future/has/inputs"
+day_template = "/future/days"
+"#;
+        let _: Config = toml::de::from_slice(TOML_DATA.as_bytes()).unwrap();
+    }
+
+    #[test]
+    fn can_serialize() {
+        let mut config = Config::default();
+        config.session = "foo bar session session".into();
+        config.paths.entry(1984).or_default().implementation = Some("/aoc/was/definitely/a/thing".into());
+
+        {
+            let paths = Paths {
+                implementation: Some("/what/future".into()),
+                input_files: Some("/what/future/has/inputs".into()),
+                day_template: Some("/future/days".into()),
+            };
+            config.paths.insert(1984, paths);
+        }
+
+        toml::ser::to_string_pretty(&config).unwrap();
+    }
 }
