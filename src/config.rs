@@ -26,6 +26,7 @@ pub struct Config {
 
     /// Paths are independently configured per year.
     #[serde_as(as = "HashMap<DisplayFromStr, _>")]
+    #[serde(default)]
     pub paths: HashMap<u32, Paths>,
 }
 
@@ -149,6 +150,12 @@ implementation = "/what/future"
 input_files = "/what/future/has/inputs"
 day_template = "/future/days"
 "#;
+        let _: Config = toml::de::from_slice(TOML_DATA.as_bytes()).unwrap();
+    }
+
+    #[test]
+    fn can_deserialize_without_paths() {
+        const TOML_DATA: &str = r#"session = "I'm a session key!""#;
         let _: Config = toml::de::from_slice(TOML_DATA.as_bytes()).unwrap();
     }
 
