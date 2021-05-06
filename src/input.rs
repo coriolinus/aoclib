@@ -72,17 +72,15 @@ where
         buf.clear();
         reader.read_line(&mut buf).ok().and_then(|_| {
             line += 1;
-            if buf.is_empty() {
-                None
-            } else {
-                match T::from_str(&buf.trim()) {
+            (!buf.is_empty())
+                .then(|| match T::from_str(&buf.trim()) {
                     Ok(t) => Some(t),
                     Err(e) => {
-                        eprintln!("{}:{}: {} for {:?}", file_name, line, e, buf);
+                        eprintln!("{}:{}: {} for {:?}", file_name, line, e, buf.trim());
                         None
                     }
-                }
-            }
+                })
+                .flatten()
         })
     })
     .fuse())
@@ -176,17 +174,15 @@ where
                 break;
             }
         }
-        if buf.is_empty() {
-            None
-        } else {
-            match T::from_str(&buf) {
+        (!buf.is_empty())
+            .then(|| match T::from_str(&buf) {
                 Ok(t) => Some(t),
                 Err(e) => {
-                    eprintln!("{}:{}: {} for {:?}", file_name, line - 1, e, buf,);
+                    eprintln!("{}:{}: {} for {:?}", file_name, line - 1, e, buf);
                     None
                 }
-            }
-        }
+            })
+            .flatten()
     })
     .fuse())
 }
