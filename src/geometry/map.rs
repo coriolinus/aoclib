@@ -38,6 +38,21 @@ pub struct Map<T> {
 }
 
 impl<T> Map<T> {
+    /// Procedurally create a new `Map` from a function.
+    pub fn procedural(width: usize, height: usize, procedure: impl Fn(Point) -> T) -> Map<T> {
+        let area = width * height;
+        let mut map = Map {
+            tiles: Vec::with_capacity(area),
+            width,
+            height,
+        };
+        for idx in 0..area {
+            let point = map.index2point(idx).into();
+            map.tiles.push(procedure(point));
+        }
+        map
+    }
+
     pub fn width(&self) -> usize {
         self.width
     }
