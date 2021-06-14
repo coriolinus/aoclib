@@ -1,3 +1,7 @@
+use std::convert::TryFrom;
+
+use super::Point;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     Right,
@@ -68,5 +72,20 @@ impl Direction {
 impl Default for Direction {
     fn default() -> Self {
         Direction::Up
+    }
+}
+
+/// Inverse of [`Direction::deltas`].
+impl TryFrom<Point> for Direction {
+    type Error = ();
+
+    fn try_from(value: Point) -> Result<Self, Self::Error> {
+        match value {
+            Point { x: 0, y: 1 } => Ok(Direction::Up),
+            Point { x: 0, y: -1 } => Ok(Direction::Down),
+            Point { x: 1, y: 0 } => Ok(Direction::Right),
+            Point { x: -1, y: 0 } => Ok(Direction::Left),
+            _ => Err(()),
+        }
     }
 }
