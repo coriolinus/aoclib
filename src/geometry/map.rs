@@ -29,7 +29,7 @@ use std::time::Duration;
 /// ## Entry Points
 ///
 /// - [`Map::new`] is most useful when the problem involves cartography.
-/// - When a map is provided as the day's input, use `Map::try_from(path)`
+/// - When a map is provided as the day's input, use [`Map::try_from`]
 #[derive(Clone, Default)]
 pub struct Map<T> {
     tiles: Vec<T>,
@@ -358,7 +358,7 @@ where
     ///
     /// That doesn't stop us from doing it here, and implementing the official trait for
     /// a few concrete types
-    fn try_from<R>(input: R) -> Result<Self, MapConversionErr>
+    pub fn try_from<R>(input: R) -> Result<Self, MapConversionErr>
     where
         R: std::io::BufRead,
     {
