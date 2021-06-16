@@ -332,8 +332,11 @@ where
 
 #[derive(Debug, thiserror::Error)]
 pub enum MapConversionErr {
-    #[error("converting tile")]
-    TileConversion(#[source] Box<dyn 'static + std::error::Error + Send + Sync>),
+    #[error("converting tile from {1:?}")]
+    TileConversion(
+        #[source] Box<dyn 'static + std::error::Error + Send + Sync>,
+        String,
+    ),
     #[error("map must be rectangular")]
     NotRectangular,
     #[error(transparent)]
@@ -369,10 +372,9 @@ where
 
             let mut row = Vec::with_capacity(line.len() / T::DISPLAY_WIDTH);
             for chunk in T::chunks(&line) {
-                row.push(
-                    T::from_str(&chunk)
-                        .map_err(|err| MapConversionErr::TileConversion(Box::new(err)))?,
-                );
+                row.push(T::from_str(&chunk).map_err(|err| {
+                    MapConversionErr::TileConversion(Box::new(err), chunk.to_string())
+                })?);
             }
             if !row.is_empty() {
                 arr.push(row);
