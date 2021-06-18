@@ -1,4 +1,5 @@
 pub mod config;
+pub mod data_structures;
 pub mod geometry;
 pub mod input;
 pub mod numbers;
