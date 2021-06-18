@@ -43,6 +43,25 @@ impl<T> Node<T> {
         ptr.map(|ptr| ptr.as_ref())
     }
 
+    /// Create an `Option<&mut Node<T>>` from a `NodePtr<T>`.
+    ///
+    /// Unsafe beause it has an arbitrary lifetime, which is inappropriate.
+    /// For example, this can create a static lifetime.
+    ///
+    /// Use caution when returning references created by this function to
+    /// ensure that they are forced into appropriate lifetimes.
+    unsafe fn from_ptr_mut<'a>(ptr: NodePtr<T>) -> Option<&'a mut Node<T>> {
+        ptr.map(|mut ptr| ptr.as_mut())
+    }
+
+    /// Create an `Option<Node<T>>` from a `NodePtr<T>`.
+    ///
+    /// Consumes `ptr`: it is always `None` after this function.
+    fn owned_from_ptr(ptr: &mut NodePtr<T>) -> Option<Node<T>> {
+        ptr.take()
+            .map(|ptr| unsafe { *Box::from_raw(ptr.as_ptr()) })
+    }
+
     fn len(&self) -> usize {
         1 + self.next.map_or(0, |next| unsafe { next.as_ref().len() })
     }
@@ -124,12 +143,12 @@ impl<T> LinkedList<T> {
 
     /// Convert a node pointer to an element reference.
     fn elem(&self, ptr: NodePtr<T>) -> Option<&T> {
-        ptr.map(|raw_ptr| &Box::leak(unsafe { Box::from_raw(raw_ptr.as_ptr()) }).item)
+        unsafe { Node::from_ptr(ptr) }.map(|node| &node.item)
     }
 
     /// Convert a node pointer to a mutable element reference.
     fn elem_mut(&self, ptr: NodePtr<T>) -> Option<&mut T> {
-        ptr.map(|raw_ptr| &mut Box::leak(unsafe { Box::from_raw(raw_ptr.as_ptr()) }).item)
+        unsafe { Node::from_ptr_mut(ptr) }.map(|node| &mut node.item)
     }
 
     /// Get a reference to the front element in the list.
@@ -215,20 +234,14 @@ impl<T> Cursor<'_, T> {
     /// Move one position forward (towards the end) and
     /// return a reference to the new position.
     pub fn advance(&mut self) -> Option<&mut T> {
-        self.ptr = match self.ptr {
-            None => None,
-            Some(raw_ptr) => unsafe { (*raw_ptr.as_ptr()).next },
-        };
+        self.ptr = unsafe { Node::from_ptr(self.ptr) }.and_then(|node| node.next);
         self.elem_mut()
     }
 
     /// Move one position backward (towards the start) and
     /// return a reference to the new position.
     pub fn retreat(&mut self) -> Option<&mut T> {
-        self.ptr = match self.ptr {
-            None => None,
-            Some(raw_ptr) => unsafe { (*raw_ptr.as_ptr()).prev },
-        };
+        self.ptr = unsafe { Node::from_ptr(self.ptr) }.and_then(|node| node.prev);
         self.elem_mut()
     }
 
@@ -254,37 +267,28 @@ impl<T> Cursor<'_, T> {
     /// to the neighboring element that's closest to the back. This can be
     /// either the next or previous position.
     pub fn take(&mut self) -> Option<T> {
-        let mut rv = None;
-        let mut next = None;
-        if let Some(node) = self.ptr {
-            unsafe {
-                let node = *Box::from_raw(node.as_ptr());
-                // select next and update pointers
-                if node.next.is_some() {
-                    next = node.next;
-                } else if node.prev.is_some() {
-                    next = node.prev;
-                }
-                // update external pointers
-                if let Some(nnext) = node.next {
-                    (*nnext.as_ptr()).prev = node.prev;
-                } else {
-                    self.ll.back = node.prev;
-                }
-                if let Some(nprev) = node.prev {
-                    (*nprev.as_ptr()).next = node.next;
-                } else {
-                    self.ll.front = node.next;
-                }
+        Node::owned_from_ptr(&mut self.ptr).map(|node| {
+            // update self ptr
+            self.ptr = node.next.or(node.prev);
 
-                // get return value
-                rv = Some(node.item);
-                self.ll.len -= 1;
+            // update external pointers
+            if let Some(next) = unsafe { Node::from_ptr_mut(node.next) } {
+                next.prev = node.prev;
+            } else {
+                self.ll.back = node.prev;
             }
-            // update self
-            self.ptr = next;
-        }
-        rv
+
+            if let Some(prev) = unsafe { Node::from_ptr_mut(node.prev) } {
+                prev.next = node.next;
+            } else {
+                self.ll.front = node.next;
+            }
+
+            self.ll.len -= 1;
+
+            // return the item
+            node.item
+        })
     }
 
     /// Insert an element after the current position.
