@@ -12,16 +12,13 @@ pub struct Point {
 }
 
 impl Point {
+    #[inline]
     pub const fn new(x: i32, y: i32) -> Point {
         Point { x, y }
     }
 
-    // on my machine, passing self by copy and reference are equally sized,
-    // and passing by copy breaks the cleanest usage of this function in Iterator::map,
-    // so I'm going to retain the reference behavior. I expect the compiler to
-    // inline this function anyway.
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn manhattan(&self) -> i32 {
+    #[inline]
+    pub fn manhattan(self) -> i32 {
         self.x.abs() + self.y.abs()
     }
 
@@ -48,6 +45,7 @@ impl Point {
     /// point = point.rotate_right();
     /// assert_eq!(point, Point::new(2, 1));
     /// ```
+    #[inline]
     pub fn rotate_right(&self) -> Point {
         Point::new(self.y, -self.x)
     }
@@ -68,12 +66,14 @@ impl Point {
     /// point = point.rotate_left();
     /// assert_eq!(point, Point::new(2, 1));
     /// ```
+    #[inline]
     pub fn rotate_left(&self) -> Point {
         Point::new(-self.y, self.x)
     }
 }
 
 impl From<(usize, usize)> for Point {
+    #[inline]
     fn from((x, y): (usize, usize)) -> Self {
         Self::new(
             i32::try_from(x).unwrap_or(i32::MAX),
@@ -83,6 +83,7 @@ impl From<(usize, usize)> for Point {
 }
 
 impl AddAssign for Point {
+    #[inline]
     fn add_assign(&mut self, other: Point) {
         self.x += other.x;
         self.y += other.y;
@@ -92,6 +93,7 @@ impl AddAssign for Point {
 impl Add for Point {
     type Output = Point;
 
+    #[inline]
     fn add(mut self, other: Point) -> Point {
         self += other;
         self
@@ -99,6 +101,7 @@ impl Add for Point {
 }
 
 impl AddAssign<(i32, i32)> for Point {
+    #[inline]
     fn add_assign(&mut self, (dx, dy): (i32, i32)) {
         self.x += dx;
         self.y += dy;
@@ -108,12 +111,14 @@ impl AddAssign<(i32, i32)> for Point {
 impl Add<(i32, i32)> for Point {
     type Output = Point;
 
+    #[inline]
     fn add(mut self, deltas: (i32, i32)) -> Point {
         self += deltas;
         self
     }
 }
 impl AddAssign<Direction> for Point {
+    #[inline]
     fn add_assign(&mut self, direction: Direction) {
         *self += direction.deltas();
     }
@@ -122,6 +127,7 @@ impl AddAssign<Direction> for Point {
 impl Add<Direction> for Point {
     type Output = Point;
 
+    #[inline]
     fn add(mut self, direction: Direction) -> Point {
         self += direction;
         self
@@ -129,6 +135,7 @@ impl Add<Direction> for Point {
 }
 
 impl AddAssign<LineSegment> for Point {
+    #[inline]
     fn add_assign(
         &mut self,
         LineSegment {
@@ -146,6 +153,7 @@ impl AddAssign<LineSegment> for Point {
 impl Add<LineSegment> for Point {
     type Output = Point;
 
+    #[inline]
     fn add(mut self, line_segment: LineSegment) -> Point {
         self += line_segment;
         self
@@ -155,6 +163,7 @@ impl Add<LineSegment> for Point {
 impl Sub for Point {
     type Output = Point;
 
+    #[inline]
     fn sub(self, other: Point) -> Point {
         Point {
             x: self.x - other.x,
@@ -166,6 +175,7 @@ impl Sub for Point {
 impl Mul<i32> for Point {
     type Output = Point;
 
+    #[inline]
     fn mul(self, other: i32) -> Point {
         Point {
             x: self.x * other,
@@ -177,6 +187,7 @@ impl Mul<i32> for Point {
 impl Div<i32> for Point {
     type Output = Point;
 
+    #[inline]
     fn div(self, other: i32) -> Point {
         Point {
             x: self.x / other,
@@ -236,7 +247,7 @@ impl PointTrait for Point {
     type N = i32;
 
     fn manhattan(self) -> Self::N {
-        <Self>::manhattan(&self)
+        <Self>::manhattan(self)
     }
 
     fn decr(self) -> Self {

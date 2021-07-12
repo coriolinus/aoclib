@@ -14,6 +14,7 @@
 use num::{integer::Integer, traits::Signed};
 use std::{iter::Product, ops::AddAssign};
 
+#[allow(clippy::many_single_char_names)]
 fn egcd<N: Integer + Copy + Signed>(a: N, b: N) -> (N, N, N) {
     if a.is_zero() {
         (b, N::zero(), N::one())

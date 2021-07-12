@@ -11,7 +11,7 @@ pub trait DisplayWidth {
     const DISPLAY_WIDTH: usize;
 
     /// Split a string into an iterator of chunks of characters of length `DISPLAY_WIDTH`
-    fn chunks<'a>(s: &'a str) -> Chunks<'a, Self> {
+    fn chunks(s: &str) -> Chunks<Self> {
         Chunks(s.chars(), PhantomData)
     }
 }

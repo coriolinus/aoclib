@@ -207,7 +207,7 @@ impl<T> Map<T> {
 impl<T: Clone + Default> Map<T> {
     pub fn new(width: usize, height: usize) -> Map<T> {
         Map {
-            tiles: vec![T::default(); width * height].into(),
+            tiles: vec![T::default(); width * height],
             width,
             height,
         }
@@ -384,7 +384,7 @@ where
         if !arr.is_empty() {
             let width = arr[0].len();
             if !arr.iter().all(|row| row.len() == width) {
-                Err(MapConversionErr::NotRectangular)?;
+                return Err(MapConversionErr::NotRectangular);
             }
         }
 
@@ -485,7 +485,7 @@ where
             for x in 0..self.width {
                 write!(f, "{:width$}", self.index((x, y)), width = T::DISPLAY_WIDTH)?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
         Ok(())
     }
@@ -704,10 +704,8 @@ impl<T: Clone + ContextInto<Traversable>> Map<T> {
 
             visited.set(idx(point), true);
             let traversable = self[point].clone().ctx_into(context);
-            if traversable != Traversable::Obstructed {
-                if visit(&self[point], point) {
-                    break;
-                }
+            if traversable != Traversable::Obstructed && visit(&self[point], point) {
+                break;
             }
 
             if traversable == Traversable::Free {
@@ -790,11 +788,7 @@ impl<T: Clone + ContextInto<Traversable>> Map<T> {
                             // this thing with the iterator is not very efficient, but for some weird reason BinaryHeap
                             // doesn't have a .contains method; see
                             // https://github.com/rust-lang/rust/issues/66724
-                            if open_set
-                                .iter()
-                                .find(|elem| elem.position == neighbor)
-                                .is_none()
-                            {
+                            if !open_set.iter().any(|elem| elem.position == neighbor) {
                                 open_set.push(AStarNode {
                                     cost: tentative_cheapest_path_cost,
                                     position: neighbor,

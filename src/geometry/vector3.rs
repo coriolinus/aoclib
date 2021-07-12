@@ -132,7 +132,7 @@ impl FromStr for Vector3 {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let captures = VEC3_RE.captures(s).ok_or(format!("no regex match"))?;
+        let captures = VEC3_RE.captures(s).ok_or("no regex match".to_string())?;
         Ok(Vector3 {
             x: captures
                 .name("x")
