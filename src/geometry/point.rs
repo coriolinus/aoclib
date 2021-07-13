@@ -2,7 +2,7 @@ use crate::geometry::{line_segment::LineSegment, Direction};
 use itertools::Itertools;
 use std::{
     convert::TryFrom,
-    ops::{Add, AddAssign, Div, Mul, Sub},
+    ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -160,15 +160,21 @@ impl Add<LineSegment> for Point {
     }
 }
 
+impl SubAssign for Point {
+    #[inline]
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+    }
+}
+
 impl Sub for Point {
     type Output = Point;
 
     #[inline]
-    fn sub(self, other: Point) -> Point {
-        Point {
-            x: self.x - other.x,
-            y: self.y - other.y,
-        }
+    fn sub(mut self, other: Point) -> Point {
+        self -= other;
+        self
     }
 }
 
