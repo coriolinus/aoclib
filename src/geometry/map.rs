@@ -618,7 +618,7 @@ pub enum Traversable {
 pub trait ContextFrom<T> {
     type Context;
 
-    fn ctx_from(t: T, context: &Self::Context) -> Self;
+    fn ctx_from(t: T, position: Point, context: &Self::Context) -> Self;
 }
 
 impl<A, B> ContextFrom<A> for B
@@ -627,7 +627,7 @@ where
 {
     type Context = ();
 
-    fn ctx_from(a: A, _context: &()) -> B {
+    fn ctx_from(a: A, _position: Point, _context: &()) -> B {
         B::from(a)
     }
 }
@@ -640,7 +640,7 @@ where
 pub trait ContextInto<T> {
     type Context;
 
-    fn ctx_into(self, context: &Self::Context) -> T;
+    fn ctx_into(self, position: Point, context: &Self::Context) -> T;
 }
 
 impl<A, B> ContextInto<B> for A
@@ -649,8 +649,8 @@ where
 {
     type Context = <B as ContextFrom<A>>::Context;
 
-    fn ctx_into(self, context: &Self::Context) -> B {
-        B::ctx_from(self, context)
+    fn ctx_into(self, position: Point, context: &Self::Context) -> B {
+        B::ctx_from(self, position, context)
     }
 }
 
@@ -703,7 +703,7 @@ impl<T: Clone + ContextInto<Traversable>> Map<T> {
             }
 
             visited.set(idx(point), true);
-            let traversable = self[point].clone().ctx_into(context);
+            let traversable = self[point].clone().ctx_into(point, context);
             if traversable != Traversable::Obstructed && visit(&self[point], point) {
                 break;
             }
@@ -767,7 +767,7 @@ impl<T: Clone + ContextInto<Traversable>> Map<T> {
                 if !self.in_bounds(neighbor) {
                     continue;
                 }
-                match self[neighbor].clone().ctx_into(context) {
+                match self[neighbor].clone().ctx_into(neighbor, context) {
                     Traversable::Obstructed => {}
                     Traversable::Free | Traversable::Halt => {
                         let tentative_cheapest_path_cost = cost + 1;
