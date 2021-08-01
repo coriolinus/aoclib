@@ -508,16 +508,14 @@ where
     }
 
     /// Render this map as a [`gif::Frame`].
-    pub(crate) fn render_frame(&self) -> gif::Frame {
+    pub(crate) fn render_frame(&self, style: Style) -> gif::Frame {
         use render::{n_pixels_for, pixel_height, pixel_width};
 
         // 16 pixels per light: 3x3 with a 1px margin
         // 3 subpixels per pixel; 1 each for r, g, b
         let width = self.width;
         let mut subpixels = vec![0; n_pixels_for(self.width, self.height) * 3];
-        self.for_each_point(
-            self.make_point_renderer(&mut subpixels, todo!("get style from animation struct")),
-        );
+        self.for_each_point(self.make_point_renderer(&mut subpixels, style));
         gif::Frame::from_rgb(pixel_width(width), pixel_height(self.height), &subpixels)
     }
 
@@ -536,35 +534,16 @@ where
         .map_err(Into::into)
     }
 
-    fn render_inner(&self, output: &Path, sparkle: bool) -> Result<(), RenderError> {
-        let mut output = self.make_gif_encoder(output)?;
-        output.write_frame(&self.render_frame())?;
-        Ok(())
-    }
-
     /// Render this map as a still image into an output file.
     ///
     /// _Depends on the `map-render` feature._
     ///
     /// The output image is a gif under all circumstances. It is useful, though
     /// unenforced, that the output file name matches `*.gif`.
-    pub fn render(&self, output: &Path) -> Result<(), RenderError> {
-        self.render_inner(output, false)
-    }
-
-    /// Render this map as a still image into an output file, with sparkles.
-    ///
-    /// _Depends on the `map-render` feature._
-    ///
-    /// The output image is a gif under all circumstances. It is useful, though
-    /// unenforced, that the output file name matches `*.gif`.
-    ///
-    /// The sparkle effect works by replacing randomly chosen corners of each
-    /// tile with black. Corners are chosen independently with probability `0.5`.
-    /// This effect works best when randomly chosen black corners do not conflict
-    /// with the overall image aesthetic.
-    pub fn render_sparkle(&self, output: &Path) -> Result<(), RenderError> {
-        self.render_inner(output, true)
+    pub fn render(&self, output: &Path, style: Style) -> Result<(), RenderError> {
+        let mut output = self.make_gif_encoder(output)?;
+        output.write_frame(&self.render_frame(style))?;
+        Ok(())
     }
 
     /// Prepare an animation from this map.
@@ -584,10 +563,10 @@ where
         &self,
         output: &Path,
         frame_duration: Duration,
+        style: Style,
     ) -> Result<Animation, RenderError> {
         let encoder = self.make_gif_encoder(output)?;
-        let animation = Animation::new(encoder, frame_duration)?;
-        Ok(animation)
+        Animation::new(encoder, frame_duration, style).map_err(Into::into)
     }
 }
 

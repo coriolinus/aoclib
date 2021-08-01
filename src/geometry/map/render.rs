@@ -17,7 +17,7 @@ pub enum Style {
 }
 
 impl Style {
-    fn offsets(self, rng: &mut impl Rng) -> Box<dyn '_ + Iterator<Item = Point>> {
+    fn offsets(self) -> Box<dyn Iterator<Item = Point>> {
         match self {
             Style::Cross => Box::new(std::array::IntoIter::new([
                 Point::new(1, 0),
@@ -27,18 +27,20 @@ impl Style {
                 Point::new(1, 2),
             ])),
             Style::SparkleCross => {
+                let mut rng = rand::thread_rng();
+
                 let corners = std::array::IntoIter::new([
                     Point::new(0, 0),
                     Point::new(0, 2),
                     Point::new(2, 0),
                     Point::new(2, 2),
                 ])
-                .filter(|_point| rng.gen());
+                .filter(move |_point| rng.gen());
 
-                Box::new(Style::Cross.offsets(rng).chain(corners))
+                Box::new(Style::Cross.offsets().chain(corners))
             }
-            Style::Grid => Box::new((0..3).flat_map(|y| (0..3).map(|x| Point::new(x, y)))),
-            Style::Fill => Box::new((0..4).flat_map(|y| (0..4).map(|x| Point::new(x, y)))),
+            Style::Grid => Box::new((0..3).flat_map(|y| (0..3).map(move |x| Point::new(x, y)))),
+            Style::Fill => Box::new((0..4).flat_map(|y| (0..4).map(move |x| Point::new(x, y)))),
         }
     }
 }
@@ -50,8 +52,6 @@ pub fn render_point<Tile: ToRgb>(
     width: usize,
     style: Style,
 ) {
-    let mut rng = rand::thread_rng();
-
     let x = |point: Point| point.x as usize;
     let y = |point: Point| point.y as usize;
 
@@ -80,7 +80,7 @@ pub fn render_point<Tile: ToRgb>(
 
     let rgb = tile.to_rgb();
 
-    for offset in style.offsets(&mut rng) {
+    for offset in style.offsets() {
         let idx = linear_idx(offset);
         subpixels[idx..idx + 3].copy_from_slice(&rgb);
     }
@@ -115,6 +115,7 @@ pub type Encoder = gif::Encoder<std::io::BufWriter<std::fs::File>>;
 /// The gif is finalized when this struct is dropped.
 pub struct Animation {
     encoder: Encoder,
+    style: Style,
 }
 
 impl Animation {
@@ -125,6 +126,7 @@ impl Animation {
     pub(crate) fn new(
         mut encoder: Encoder,
         frame_duration: Duration,
+        style: Style,
     ) -> Result<Animation, gif::EncodingError> {
         encoder.set_repeat(gif::Repeat::Infinite)?;
 
@@ -136,7 +138,7 @@ impl Animation {
             None,
         ))?;
 
-        Ok(Animation { encoder })
+        Ok(Animation { encoder, style })
     }
 
     /// Write a frame to this animation.
@@ -144,7 +146,6 @@ impl Animation {
     /// This frame will be visible for the duration specified at the animation's
     /// creation.
     pub fn write_frame<Tile: ToRgb>(&mut self, map: &Map<Tile>) -> Result<(), gif::EncodingError> {
-        self.encoder
-            .write_frame(&map.render_frame(todo!("get style from Animation struct")))
+        self.encoder.write_frame(&map.render_frame(self.style))
     }
 }
