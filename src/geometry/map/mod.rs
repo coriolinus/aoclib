@@ -35,16 +35,31 @@ pub struct Map<T> {
     tiles: Vec<T>,
     width: usize,
     height: usize,
+    offset: Point,
 }
 
 impl<T> Map<T> {
     /// Procedurally create a new `Map` from a function.
     pub fn procedural(width: usize, height: usize, procedure: impl Fn(Point) -> T) -> Map<T> {
+        Self::procedural_offset(Point::default(), width, height, procedure)
+    }
+
+    /// Procedurally create a new `Map` from a function, with an offset origin.
+    ///
+    /// This offset can reduce dead space when the interesting part of a map is
+    /// far from the origin.
+    pub fn procedural_offset(
+        offset: Point,
+        width: usize,
+        height: usize,
+        procedure: impl Fn(Point) -> T,
+    ) -> Map<T> {
         let area = width * height;
         let mut map = Map {
             tiles: Vec::with_capacity(area),
             width,
             height,
+            offset,
         };
         for idx in 0..area {
             let point = map.index2point(idx).into();
@@ -61,23 +76,43 @@ impl<T> Map<T> {
         self.height
     }
 
+    pub fn offset(&self) -> Point {
+        self.offset
+    }
+
+    pub fn low_x(&self) -> i32 {
+        self.offset.x
+    }
+
+    pub fn high_x(&self) -> i32 {
+        self.offset.x + self.width as i32 - 1
+    }
+
+    pub fn low_y(&self) -> i32 {
+        self.offset.y
+    }
+
+    pub fn high_y(&self) -> i32 {
+        self.offset.y + self.height as i32 - 1
+    }
+
     pub fn bottom_left(&self) -> Point {
-        Point::new(0, 0)
+        self.offset
     }
 
     pub fn top_left(&self) -> Point {
-        Point::new(0, self.height.try_into().unwrap_or(i32::MAX) - 1)
+        Point::new(0, self.height.try_into().unwrap_or(i32::MAX) - 1) + self.offset
     }
 
     pub fn bottom_right(&self) -> Point {
-        Point::new(self.width.try_into().unwrap_or(i32::MAX) - 1, 0)
+        Point::new(self.width.try_into().unwrap_or(i32::MAX) - 1, 0) + self.offset
     }
 
     pub fn top_right(&self) -> Point {
         Point::new(
             self.width.try_into().unwrap_or(i32::MAX) - 1,
             self.height.try_into().unwrap_or(i32::MAX) - 1,
-        )
+        ) + self.offset
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
@@ -105,7 +140,7 @@ impl<T> Map<T> {
         self.tiles
             .iter()
             .enumerate()
-            .for_each(|(idx, tile)| visit(tile, self.index2point(idx).into()));
+            .for_each(|(idx, tile)| visit(tile, self.offset_index2point(idx)));
     }
 
     pub fn for_each_point_mut<F>(&mut self, mut update: F)
@@ -132,21 +167,49 @@ impl<T> Map<T> {
     }
 
     /// convert a 2d point into a 1d index into the tiles
+    ///
+    /// **Note**: doesn't take the offset into account
     #[inline]
     fn point2index(&self, x: usize, y: usize) -> usize {
         x + (y * self.width)
     }
 
     /// convert a 1d index in the tiles into a 2d point
+    ///
+    /// **Note**: doesn't take the offset into account
     #[inline]
     fn index2point(&self, idx: usize) -> (usize, usize) {
         (idx % self.width, idx / self.width)
+    }
+
+    /// convert a 2d point into a 1d index into the tiles
+    ///
+    /// This version takes the offset into account
+    #[inline]
+    fn offset_point2index(&self, point: Point) -> usize {
+        let Point { x, y } = point - self.offset;
+        self.point2index(x as usize, y as usize)
+    }
+
+    /// convert a 1d index in the tiles into a 2d point
+    ///
+    /// This version takes the offset into account
+    #[inline]
+    fn offset_index2point(&self, idx: usize) -> Point {
+        let unoffset: Point = self.index2point(idx).into();
+        self.offset + unoffset
     }
 
     /// make a function which converts a 1d index in the tiles into a 2d point without borrowing self
     fn make_index2point(&self) -> impl Fn(usize) -> (usize, usize) {
         let width = self.width;
         move |idx: usize| (idx % width, idx / width)
+    }
+
+    /// make a function which converts a 1d index in the tiles into a properly offset 2d point without borrowing self
+    fn make_offset_index2point(&self) -> impl Fn(usize) -> Point {
+        todo!();
+        |_usize| todo!()
     }
 
     /// Return an iterator of all legal points adjacent to the given point.
