@@ -1,7 +1,7 @@
 #[cfg(feature = "map-render")]
 mod render;
 #[cfg(feature = "map-render")]
-pub use render::Animation;
+pub use render::{Animation, Style};
 
 use crate::geometry::{tile::DisplayWidth, Direction, Point};
 use bitvec::bitvec;
@@ -499,23 +499,25 @@ where
     fn make_point_renderer<'a>(
         &self,
         subpixels: &'a mut [u8],
-        sparkle: bool,
+        style: Style,
     ) -> impl 'a + FnMut(&Tile, Point) {
         let width = self.width;
         move |tile: &Tile, point: Point| {
-            render::render_point(point, tile, subpixels, width, sparkle);
+            render::render_point(point, tile, subpixels, width, style);
         }
     }
 
     /// Render this map as a [`gif::Frame`].
-    pub(crate) fn render_frame(&self, sparkle: bool) -> gif::Frame {
+    pub(crate) fn render_frame(&self) -> gif::Frame {
         use render::{n_pixels_for, pixel_height, pixel_width};
 
         // 16 pixels per light: 3x3 with a 1px margin
         // 3 subpixels per pixel; 1 each for r, g, b
         let width = self.width;
         let mut subpixels = vec![0; n_pixels_for(self.width, self.height) * 3];
-        self.for_each_point(self.make_point_renderer(&mut subpixels, sparkle));
+        self.for_each_point(
+            self.make_point_renderer(&mut subpixels, todo!("get style from animation struct")),
+        );
         gif::Frame::from_rgb(pixel_width(width), pixel_height(self.height), &subpixels)
     }
 
@@ -536,7 +538,7 @@ where
 
     fn render_inner(&self, output: &Path, sparkle: bool) -> Result<(), RenderError> {
         let mut output = self.make_gif_encoder(output)?;
-        output.write_frame(&self.render_frame(sparkle))?;
+        output.write_frame(&self.render_frame())?;
         Ok(())
     }
 

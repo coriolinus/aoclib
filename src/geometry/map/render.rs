@@ -1,17 +1,54 @@
 use crate::geometry::{tile::ToRgb, Map, Point};
-use rand::Rng as _;
+use rand::Rng;
 use std::time::Duration;
 
-/// If `sparkle`, each lit point illuminates 5 pixels in the shape of a cross, plus
-/// up to 4 more, chosen randomly, which form a sparkling effect
-///
-/// Otherwise, the lit point illuminates all 9 pixels in the square.
+/// How each tile gets rendered.
+#[derive(Debug, Clone, Copy)]
+pub enum Style {
+    /// Fill the entire 4x4 area with the tile's color.
+    Fill,
+    /// Fill a 3x3 area with the tile's color, leaving a 1 pixel black grid pattern between.
+    Grid,
+    /// Fill a 3x3 cross with the tile's color, leaving black space between.
+    Cross,
+    /// Fill a 3x3 cross with the tile's color, plus up to 4 more chosen randomly,
+    /// for a sparkling effect.
+    SparkleCross,
+}
+
+impl Style {
+    fn offsets(self, rng: &mut impl Rng) -> Box<dyn '_ + Iterator<Item = Point>> {
+        match self {
+            Style::Cross => Box::new(std::array::IntoIter::new([
+                Point::new(1, 0),
+                Point::new(0, 1),
+                Point::new(1, 1),
+                Point::new(2, 1),
+                Point::new(1, 2),
+            ])),
+            Style::SparkleCross => {
+                let corners = std::array::IntoIter::new([
+                    Point::new(0, 0),
+                    Point::new(0, 2),
+                    Point::new(2, 0),
+                    Point::new(2, 2),
+                ])
+                .filter(|_point| rng.gen());
+
+                Box::new(Style::Cross.offsets(rng).chain(corners))
+            }
+            Style::Grid => Box::new((0..3).flat_map(|y| (0..3).map(|x| Point::new(x, y)))),
+            Style::Fill => Box::new((0..4).flat_map(|y| (0..4).map(|x| Point::new(x, y)))),
+        }
+    }
+}
+
 pub fn render_point<Tile: ToRgb>(
     position: Point,
     tile: &Tile,
     subpixels: &mut [u8],
     width: usize,
-    sparkle: bool,
+    style: Style,
 ) {
     let mut rng = rand::thread_rng();
 
@@ -43,33 +80,9 @@ pub fn render_point<Tile: ToRgb>(
 
     let rgb = tile.to_rgb();
 
-    // central cross shape
-    for offset in [
-        Point::new(1, 0),
-        Point::new(0, 1),
-        Point::new(1, 1),
-        Point::new(2, 1),
-        Point::new(1, 2),
-    ]
-    .iter()
-    {
-        let idx = linear_idx(*offset);
+    for offset in style.offsets(&mut rng) {
+        let idx = linear_idx(offset);
         subpixels[idx..idx + 3].copy_from_slice(&rgb);
-    }
-
-    // corners
-    for offset in [
-        Point::new(0, 0),
-        Point::new(0, 2),
-        Point::new(2, 0),
-        Point::new(2, 2),
-    ]
-    .iter()
-    {
-        if !sparkle || rng.gen::<bool>() {
-            let idx = linear_idx(*offset);
-            subpixels[idx..idx + 3].copy_from_slice(&rgb);
-        }
     }
 }
 
@@ -130,11 +143,8 @@ impl Animation {
     ///
     /// This frame will be visible for the duration specified at the animation's
     /// creation.
-    pub fn write_frame<Tile: ToRgb>(
-        &mut self,
-        map: &Map<Tile>,
-        sparkle: bool,
-    ) -> Result<(), gif::EncodingError> {
-        self.encoder.write_frame(&map.render_frame(sparkle))
+    pub fn write_frame<Tile: ToRgb>(&mut self, map: &Map<Tile>) -> Result<(), gif::EncodingError> {
+        self.encoder
+            .write_frame(&map.render_frame(todo!("get style from Animation struct")))
     }
 }
