@@ -1,3 +1,5 @@
+pub mod tile;
+
 #[cfg(feature = "map-render")]
 mod render;
 #[cfg(feature = "map-render")]
