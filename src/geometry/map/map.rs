@@ -262,6 +262,32 @@ impl<Tile> Map<Tile> {
             done: false,
         }
     }
+
+    /// Translate all points in this map by a given amount.
+    ///
+    /// Completes in `O(1)`.
+    ///
+    /// ## Example
+    ///
+    /// Using the symbols `X` and `O` to indicate tiles, and `.` to indicate out-of-bounds space
+    /// away from the origin, we start with this map:
+    ///
+    /// ```notrust
+    /// XOOX
+    /// OXOX
+    /// ```
+    ///
+    /// After applying `translate(2, 1)`, we end with this map:
+    ///
+    /// ```notrust
+    /// ..XOOX
+    /// ..OXOX
+    /// ......
+    /// ```
+    pub fn translate(&mut self, dx: i32, dy: i32) {
+        self.offset.x += dx;
+        self.offset.y += dy;
+    }
 }
 
 impl<Tile: Clone> Map<Tile> {
@@ -356,7 +382,21 @@ impl<Tile: Clone + Default> Map<Tile> {
     }
 
     /// Create a copy of this map which has been rotated counter-clockwise.
+    ///
+    /// This maintains the invariant that all points are in the positive quadrant, and assumes that
+    /// the offset is `(0, 0)`. If necessary, apply `Self::translate` before and after this operation to
+    /// produce an appropriate new offset.
+    ///
+    /// ## Panics
+    ///
+    /// If the offset is not `(0, 0)`.
     pub fn rotate_left(&self) -> Map<Tile> {
+        assert_eq!(
+            self.offset,
+            Point::default(),
+            "rotation is only legal when offset is `(0, 0)`"
+        );
+
         let mut rotated = Map::new(self.height, self.width);
 
         let rotated_origin = self.bottom_right();
@@ -369,7 +409,21 @@ impl<Tile: Clone + Default> Map<Tile> {
     }
 
     /// Create a copy of this map which has been rotated clockwise.
+    ///
+    /// This maintains the invariant that all points are in the positive quadrant, and assumes that
+    /// the offset is `(0, 0)`. If necessary, apply `Self::translate` before and after this operation to
+    /// produce an appropriate new offset.
+    ///
+    /// ## Panics
+    ///
+    /// If the offset is not `(0, 0)`.
     pub fn rotate_right(&self) -> Map<Tile> {
+        assert_eq!(
+            self.offset,
+            Point::default(),
+            "rotation is only legal when offset is `(0, 0)`"
+        );
+
         let mut rotated = Map::new(self.height, self.width);
 
         let rotated_origin = self.top_left();
