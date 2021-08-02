@@ -585,7 +585,7 @@ where
 {
     /// Render this map as a [`gif::Frame`].
     pub(crate) fn render_frame(&self, style: Style) -> gif::Frame {
-        use render::{n_pixels_for, pixel_height, pixel_width};
+        use render::{n_pixels_for, pixel_size};
 
         // 16 pixels per light: 3x3 with a 1px margin
         // 3 subpixels per pixel; 1 each for r, g, b
@@ -596,22 +596,17 @@ where
             render::render_point(point, tile, &mut subpixels, width, style)
         }
 
-        gif::Frame::from_rgb(pixel_width(width), pixel_height(self.height), &subpixels)
+        gif::Frame::from_rgb(pixel_size(width), pixel_size(self.height), &subpixels)
     }
 
     fn make_gif_encoder(&self, output: &Path) -> Result<render::Encoder, RenderError> {
-        use render::{pixel_height, pixel_width};
+        use render::pixel_size;
 
         let output = std::fs::File::create(output)?;
         let output = std::io::BufWriter::new(output);
 
-        gif::Encoder::new(
-            output,
-            pixel_width(self.width),
-            pixel_height(self.height),
-            &[],
-        )
-        .map_err(Into::into)
+        gif::Encoder::new(output, pixel_size(self.width), pixel_size(self.height), &[])
+            .map_err(Into::into)
     }
 
     /// Render this map as a still image into an output file.
