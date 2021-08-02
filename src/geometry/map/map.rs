@@ -68,7 +68,7 @@ impl<T> Map<T> {
             offset,
         };
         for idx in 0..area {
-            let point = map.index2point(idx).into();
+            let point = map.index2point(idx);
             map.tiles.push(procedure(point));
         }
         map
@@ -154,7 +154,7 @@ impl<T> Map<T> {
 
     /// Iterate over the points and tiles of this map.
     pub fn iter(&self) -> impl Iterator<Item = (Point, &T)> {
-        let index2point = self.make_offset_index2point();
+        let index2point = self.make_index2point();
         self.tiles
             .iter()
             .enumerate()
@@ -163,7 +163,7 @@ impl<T> Map<T> {
 
     /// Iterate over the points of this tiles in this map, with mutable access to the tiles.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
-        let index2point = self.make_offset_index2point();
+        let index2point = self.make_index2point();
         self.tiles
             .iter_mut()
             .enumerate()
@@ -172,7 +172,7 @@ impl<T> Map<T> {
 
     /// Iterate over the points of this map without depending on the lifetime of `self`.
     pub fn points(&self) -> impl Iterator<Item = Point> {
-        let index2point = self.make_offset_index2point();
+        let index2point = self.make_index2point();
         (0..self.tiles.len()).map(index2point)
     }
 
@@ -186,33 +186,25 @@ impl<T> Map<T> {
     }
 
     /// convert a 2d point into a 1d index into the tiles
-    ///
-    /// **Note**: doesn't take the offset into account
-    fn offset_point2index(&self, x: usize, y: usize) -> usize {
+    fn point2index(&self, x: usize, y: usize) -> usize {
         let x = (x as i32 - self.offset.x) as usize;
         let y = (y as i32 - self.offset.y) as usize;
         x + (y * self.width)
     }
 
     /// convert a 1d index in the tiles into a 2d point
-    ///
-    /// **Note**: doesn't take the offset into account
-    fn index2point(&self, idx: usize) -> (usize, usize) {
-        (idx % self.width, idx / self.width)
-    }
-
-    /// make a function which converts a 1d index in the tiles into a 2d point without borrowing self
-    fn make_index2point(&self) -> impl Fn(usize) -> (usize, usize) {
-        let width = self.width;
-        move |idx: usize| (idx % width, idx / width)
+    fn index2point(&self, idx: usize) -> Point {
+        let unoffset: Point = (idx % self.width, idx / self.width).into();
+        unoffset + self.offset
     }
 
     /// make a function which converts a 1d index in the tiles into a properly offset 2d point without borrowing self
-    fn make_offset_index2point(&self) -> impl Fn(usize) -> Point {
+    fn make_index2point(&self) -> impl Fn(usize) -> Point {
         let offset = self.offset;
-        let index2point = self.make_index2point();
+        let width = self.width;
+
         move |idx| {
-            let unoffset: Point = index2point(idx).into();
+            let unoffset: Point = (idx % width, idx / width).into();
             unoffset + offset
         }
     }
@@ -519,7 +511,7 @@ impl<T> Index<(usize, usize)> for Map<T> {
     type Output = T;
 
     fn index(&self, (x, y): (usize, usize)) -> &T {
-        self.tiles.index(self.offset_point2index(x, y))
+        self.tiles.index(self.point2index(x, y))
     }
 }
 
@@ -538,7 +530,7 @@ impl<T> Index<Point> for Map<T> {
 
 impl<T> IndexMut<(usize, usize)> for Map<T> {
     fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut T {
-        self.tiles.index_mut(self.offset_point2index(x, y))
+        self.tiles.index_mut(self.point2index(x, y))
     }
 }
 
