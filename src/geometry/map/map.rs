@@ -264,6 +264,41 @@ impl<Tile> Map<Tile> {
     }
 }
 
+impl<Tile: Clone> Map<Tile> {
+    /// Reduce the map to that portion which is interesting according to some user-defined metric.
+    ///
+    /// This can be helpful when preparing visualizations.
+    pub fn extract_interesting_region(
+        &self,
+        is_interesting: impl Fn(Point, &Tile) -> bool,
+    ) -> Self {
+        let mut min = Point::new(i32::MAX, i32::MAX);
+        let mut max = Point::new(i32::MIN, i32::MIN);
+
+        for (point, tile) in self.iter() {
+            if is_interesting(point, tile) {
+                min.x = min.x.min(point.x);
+                min.y = min.y.min(point.y);
+                max.x = max.x.max(point.x);
+                max.y = max.y.max(point.y);
+            }
+        }
+
+        debug_assert!(min.x <= max.x || self.width * self.height == 0);
+        debug_assert!(min.y <= max.y || self.width * self.height == 0);
+        debug_assert!(min.x >= self.low_x());
+        debug_assert!(min.y >= self.low_y());
+        debug_assert!(max.x <= self.high_x());
+        debug_assert!(max.y <= self.high_y());
+
+        let width = (max.x - min.x + 1) as usize;
+        let height = (max.y - min.y + 1) as usize;
+        let offset = min;
+
+        Self::procedural_offset(offset, width, height, |point| self[point].clone())
+    }
+}
+
 impl<Tile: Clone + Default> Map<Tile> {
     /// Create a new map of the specified dimensions.
     ///
