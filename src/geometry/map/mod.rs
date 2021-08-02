@@ -187,7 +187,9 @@ impl<T> Map<T> {
     /// convert a 2d point into a 1d index into the tiles
     ///
     /// **Note**: doesn't take the offset into account
-    fn point2index(&self, x: usize, y: usize) -> usize {
+    fn offset_point2index(&self, x: usize, y: usize) -> usize {
+        let x = (x as i32 - self.offset.x) as usize;
+        let y = (y as i32 - self.offset.y) as usize;
         x + (y * self.width)
     }
 
@@ -529,7 +531,7 @@ impl<T> Index<(usize, usize)> for Map<T> {
     type Output = T;
 
     fn index(&self, (x, y): (usize, usize)) -> &T {
-        self.tiles.index(self.point2index(x, y))
+        self.tiles.index(self.offset_point2index(x, y))
     }
 }
 
@@ -548,7 +550,7 @@ impl<T> Index<Point> for Map<T> {
 
 impl<T> IndexMut<(usize, usize)> for Map<T> {
     fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut T {
-        self.tiles.index_mut(self.point2index(x, y))
+        self.tiles.index_mut(self.offset_point2index(x, y))
     }
 }
 
@@ -568,9 +570,14 @@ where
     T: fmt::Display + DisplayWidth,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for y in (0..self.height).rev() {
-            for x in 0..self.width {
-                write!(f, "{:width$}", self.index((x, y)), width = T::DISPLAY_WIDTH)?;
+        for y in (self.low_y()..=self.high_y()).rev() {
+            for x in self.low_x()..self.high_x() {
+                write!(
+                    f,
+                    "{:width$}",
+                    self.index(Point::new(x, y)),
+                    width = T::DISPLAY_WIDTH
+                )?;
             }
             writeln!(f)?;
         }
@@ -584,7 +591,7 @@ where
     Tile: ToRgb,
 {
     /// Render this map as a [`gif::Frame`].
-    pub(crate) fn render_frame(&self, style: Style) -> gif::Frame {
+    fn render_frame(&self, style: Style) -> gif::Frame {
         use render::{n_pixels_for, pixel_size};
 
         // 16 pixels per light: 3x3 with a 1px margin
@@ -593,7 +600,7 @@ where
         let mut subpixels = vec![0; n_pixels_for(self.width, self.height) * 3];
 
         for (point, tile) in self.iter() {
-            render::render_point(point, tile, &mut subpixels, width, style)
+            render::render_point(point - self.offset, tile, &mut subpixels, width, style)
         }
 
         gif::Frame::from_rgb(pixel_size(width), pixel_size(self.height), &subpixels)
