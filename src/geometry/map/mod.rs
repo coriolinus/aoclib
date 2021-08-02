@@ -115,48 +115,26 @@ impl<T> Map<T> {
         ) + self.offset
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.tiles.iter()
-    }
-
-    pub fn for_each<F>(&self, visit: F)
-    where
-        F: FnMut(&T),
-    {
-        self.tiles.iter().for_each(visit);
-    }
-
-    pub fn for_each_mut<F>(&mut self, update: F)
-    where
-        F: FnMut(&mut T),
-    {
-        self.tiles.iter_mut().for_each(update);
-    }
-
-    pub fn for_each_point<F>(&self, mut visit: F)
-    where
-        F: FnMut(&T, Point),
-    {
+    pub fn iter(&self) -> impl Iterator<Item = (Point, &T)> {
+        let index2point = self.make_offset_index2point();
         self.tiles
             .iter()
             .enumerate()
-            .for_each(|(idx, tile)| visit(tile, self.offset_index2point(idx)));
+            .map(move |(idx, tile)| (index2point(idx), tile))
     }
 
-    pub fn for_each_point_mut<F>(&mut self, mut update: F)
-    where
-        F: FnMut(&mut T, Point),
-    {
-        let index2point = self.make_index2point();
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
+        let index2point = self.make_offset_index2point();
         self.tiles
             .iter_mut()
             .enumerate()
-            .for_each(|(idx, tile)| update(tile, index2point(idx).into()));
+            .map(move |(idx, tile)| (index2point(idx), tile))
     }
 
+    /// Iterate over the points of this map without depending on the lifetime of `self`.
     pub fn points(&self) -> impl Iterator<Item = Point> {
-        let index2point = self.make_index2point();
-        (0..self.tiles.len()).map(move |idx| index2point(idx).into())
+        let index2point = self.make_offset_index2point();
+        (0..self.tiles.len()).map(index2point)
     }
 
     pub fn in_bounds(&self, point: Point) -> bool {
@@ -182,24 +160,6 @@ impl<T> Map<T> {
         (idx % self.width, idx / self.width)
     }
 
-    /// convert a 2d point into a 1d index into the tiles
-    ///
-    /// This version takes the offset into account
-    #[inline]
-    fn offset_point2index(&self, point: Point) -> usize {
-        let Point { x, y } = point - self.offset;
-        self.point2index(x as usize, y as usize)
-    }
-
-    /// convert a 1d index in the tiles into a 2d point
-    ///
-    /// This version takes the offset into account
-    #[inline]
-    fn offset_index2point(&self, idx: usize) -> Point {
-        let unoffset: Point = self.index2point(idx).into();
-        self.offset + unoffset
-    }
-
     /// make a function which converts a 1d index in the tiles into a 2d point without borrowing self
     fn make_index2point(&self) -> impl Fn(usize) -> (usize, usize) {
         let width = self.width;
@@ -208,8 +168,12 @@ impl<T> Map<T> {
 
     /// make a function which converts a 1d index in the tiles into a properly offset 2d point without borrowing self
     fn make_offset_index2point(&self) -> impl Fn(usize) -> Point {
-        todo!();
-        |_usize| todo!()
+        let offset = self.offset;
+        let index2point = self.make_index2point();
+        move |idx| {
+            let unoffset: Point = index2point(idx).into();
+            unoffset + offset
+        }
     }
 
     /// Return an iterator of all legal points adjacent to the given point.
@@ -268,11 +232,22 @@ impl<T> Map<T> {
 }
 
 impl<T: Clone + Default> Map<T> {
+    /// Create a new map of the specified dimensions.
+    ///
+    /// Its lower left corner is at `(0, 0)`.
     pub fn new(width: usize, height: usize) -> Map<T> {
+        Self::new_offset(Point::default(), width, height)
+    }
+
+    /// Create a new map of the specified dimensions.
+    ///
+    /// Its lower left corner is at `offset`.
+    pub fn new_offset(offset: Point, width: usize, height: usize) -> Map<T> {
         Map {
             tiles: vec![T::default(); width * height],
             width,
             height,
+            offset,
         }
     }
 
@@ -366,6 +341,7 @@ where
                 tiles: Vec::new(),
                 width: 0,
                 height: 0,
+                offset: Point::default(),
             };
         }
 
@@ -389,6 +365,7 @@ where
             tiles,
             width,
             height,
+            offset: Point::default(),
         }
     }
 }
