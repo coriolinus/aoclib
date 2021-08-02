@@ -4,7 +4,7 @@ use bitvec::bitvec;
 use std::{
     collections::{BinaryHeap, HashMap, VecDeque},
     convert::TryFrom,
-    fmt,
+    fmt, hash,
     ops::{Index, IndexMut},
     str::FromStr,
 };
@@ -436,8 +436,8 @@ impl<Tile: Clone + Default> Map<Tile> {
     }
 }
 
-impl<Tile: std::hash::Hash> std::hash::Hash for Map<Tile> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<Tile: hash::Hash> hash::Hash for Map<Tile> {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
         self.tiles.hash(state);
         self.width.hash(state);
         self.height.hash(state);
@@ -449,8 +449,8 @@ impl<Tile: PartialEq> PartialEq for Map<Tile> {
     fn eq(&self, other: &Self) -> bool {
         self.width == other.width
             && self.height == other.height
-            && self.tiles == other.tiles
             && self.offset == other.offset
+            && self.tiles == other.tiles
     }
 }
 
