@@ -339,13 +339,16 @@ impl<Tile: Clone + Default> Map<Tile> {
     }
 
     /// Create a copy of this map which has been flipped horizontally; the axis of symmetry is vertical.
+    ///
+    /// This does not adjust the offset; the corners remain where they previously were.
     pub fn flip_horizontal(&self) -> Map<Tile> {
         let mut flipped = Map::new_offset(self.offset, self.width, self.height);
 
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let flipped_x = self.width - x - 1;
-                flipped[(flipped_x, y)] = self[(x, y)].clone();
+        for y in self.low_y()..=self.high_y() {
+            for x in 0..(self.width as i32) {
+                let flipped_x = self.high_x() - x;
+                let non_flipped_x = self.low_x() + x;
+                flipped[Point::new(flipped_x, y)] = self[Point::new(non_flipped_x, y)].clone();
             }
         }
 
