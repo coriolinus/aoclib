@@ -6,7 +6,7 @@ pub use render::{Animation, Style};
 use crate::geometry::{tile::DisplayWidth, Direction, Point};
 use bitvec::bitvec;
 use std::collections::{BinaryHeap, HashMap, VecDeque};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
@@ -583,17 +583,6 @@ impl<Tile> Map<Tile>
 where
     Tile: ToRgb,
 {
-    fn make_point_renderer<'a>(
-        &self,
-        subpixels: &'a mut [u8],
-        style: Style,
-    ) -> impl 'a + FnMut(&Tile, Point) {
-        let width = self.width;
-        move |tile: &Tile, point: Point| {
-            render::render_point(point, tile, subpixels, width, style);
-        }
-    }
-
     /// Render this map as a [`gif::Frame`].
     pub(crate) fn render_frame(&self, style: Style) -> gif::Frame {
         use render::{n_pixels_for, pixel_height, pixel_width};
@@ -602,7 +591,11 @@ where
         // 3 subpixels per pixel; 1 each for r, g, b
         let width = self.width;
         let mut subpixels = vec![0; n_pixels_for(self.width, self.height) * 3];
-        self.for_each_point(self.make_point_renderer(&mut subpixels, style));
+
+        for (point, tile) in self.iter() {
+            render::render_point(point, tile, &mut subpixels, width, style)
+        }
+
         gif::Frame::from_rgb(pixel_width(width), pixel_height(self.height), &subpixels)
     }
 
