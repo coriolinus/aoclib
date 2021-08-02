@@ -37,16 +37,16 @@ use {
 /// Several internal methods assume that the width and height of the map can be
 /// represented in an `i32`. Very large maps may panic if that assumption is violated.
 #[derive(Clone, Default)]
-pub struct Map<T> {
-    tiles: Vec<T>,
+pub struct Map<Tile> {
+    tiles: Vec<Tile>,
     width: usize,
     height: usize,
     offset: Point,
 }
 
-impl<T> Map<T> {
+impl<Tile> Map<Tile> {
     /// Procedurally create a new `Map` from a function.
-    pub fn procedural(width: usize, height: usize, procedure: impl Fn(Point) -> T) -> Map<T> {
+    pub fn procedural(width: usize, height: usize, procedure: impl Fn(Point) -> Tile) -> Map<Tile> {
         Self::procedural_offset(Point::default(), width, height, procedure)
     }
 
@@ -58,8 +58,8 @@ impl<T> Map<T> {
         offset: Point,
         width: usize,
         height: usize,
-        procedure: impl Fn(Point) -> T,
-    ) -> Map<T> {
+        procedure: impl Fn(Point) -> Tile,
+    ) -> Map<Tile> {
         let area = width * height;
         let mut map = Map {
             tiles: Vec::with_capacity(area),
@@ -153,7 +153,7 @@ impl<T> Map<T> {
     }
 
     /// Iterate over the points and tiles of this map.
-    pub fn iter(&self) -> impl Iterator<Item = (Point, &T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Point, &Tile)> {
         let index2point = self.make_index2point();
         self.tiles
             .iter()
@@ -162,7 +162,7 @@ impl<T> Map<T> {
     }
 
     /// Iterate over the points of this tiles in this map, with mutable access to the tiles.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Point, &mut Tile)> {
         let index2point = self.make_index2point();
         self.tiles
             .iter_mut()
@@ -264,12 +264,12 @@ impl<T> Map<T> {
     }
 }
 
-impl<T: Clone + Default> Map<T> {
+impl<Tile: Clone + Default> Map<Tile> {
     /// Create a new map of the specified dimensions.
     ///
     /// Its lower left corner is at `(0, 0)`.
     #[inline]
-    pub fn new(width: usize, height: usize) -> Map<T> {
+    pub fn new(width: usize, height: usize) -> Map<Tile> {
         Self::new_offset(Point::default(), width, height)
     }
 
@@ -277,9 +277,9 @@ impl<T: Clone + Default> Map<T> {
     ///
     /// Its lower left corner is at `offset`.
     #[inline]
-    pub fn new_offset(offset: Point, width: usize, height: usize) -> Map<T> {
+    pub fn new_offset(offset: Point, width: usize, height: usize) -> Map<Tile> {
         Map {
-            tiles: vec![T::default(); width * height],
+            tiles: vec![Tile::default(); width * height],
             width,
             height,
             offset,
@@ -289,7 +289,7 @@ impl<T: Clone + Default> Map<T> {
     /// Create a copy of this map which has been flipped vertically: the axis of symmetry is horizontal.
     ///
     /// This does not adjust the offset; the corners remain where they previously were.
-    pub fn flip_vertical(&self) -> Map<T> {
+    pub fn flip_vertical(&self) -> Map<Tile> {
         let mut flipped = Map::new_offset(self.offset, self.width, self.height);
 
         for y in 0..(self.height as i32) {
@@ -304,7 +304,7 @@ impl<T: Clone + Default> Map<T> {
     }
 
     /// Create a copy of this map which has been flipped horizontally; the axis of symmetry is vertical.
-    pub fn flip_horizontal(&self) -> Map<T> {
+    pub fn flip_horizontal(&self) -> Map<Tile> {
         let mut flipped = Map::new_offset(self.offset, self.width, self.height);
 
         for y in 0..self.height {
@@ -318,7 +318,7 @@ impl<T: Clone + Default> Map<T> {
     }
 
     /// Create a copy of this map which has been rotated counter-clockwise.
-    pub fn rotate_left(&self) -> Map<T> {
+    pub fn rotate_left(&self) -> Map<Tile> {
         let mut rotated = Map::new(self.height, self.width);
 
         let rotated_origin = self.bottom_right();
@@ -331,7 +331,7 @@ impl<T: Clone + Default> Map<T> {
     }
 
     /// Create a copy of this map which has been rotated clockwise.
-    pub fn rotate_right(&self) -> Map<T> {
+    pub fn rotate_right(&self) -> Map<Tile> {
         let mut rotated = Map::new(self.height, self.width);
 
         let rotated_origin = self.top_left();
@@ -344,7 +344,7 @@ impl<T: Clone + Default> Map<T> {
     }
 }
 
-impl<T: std::hash::Hash> std::hash::Hash for Map<T> {
+impl<Tile: std::hash::Hash> std::hash::Hash for Map<Tile> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.tiles.hash(state);
         self.width.hash(state);
@@ -353,7 +353,7 @@ impl<T: std::hash::Hash> std::hash::Hash for Map<T> {
     }
 }
 
-impl<T: PartialEq> PartialEq for Map<T> {
+impl<Tile: PartialEq> PartialEq for Map<Tile> {
     fn eq(&self, other: &Self) -> bool {
         self.width == other.width
             && self.height == other.height
@@ -362,12 +362,12 @@ impl<T: PartialEq> PartialEq for Map<T> {
     }
 }
 
-impl<T: Eq> Eq for Map<T> {}
+impl<Tile: Eq> Eq for Map<Tile> {}
 
-impl<T, R> From<&[R]> for Map<T>
+impl<Tile, Row> From<&[Row]> for Map<Tile>
 where
-    T: Clone,
-    R: AsRef<[T]>,
+    Tile: Clone,
+    Row: AsRef<[Tile]>,
 {
     /// Convert an input 2d array into a map.
     ///
@@ -376,7 +376,7 @@ where
     /// lower left corner of the map.
     ///
     /// Panics if the input array is not rectangular.
-    fn from(source: &[R]) -> Map<T> {
+    fn from(source: &[Row]) -> Map<Tile> {
         let height = source.len();
         if height == 0 {
             return Map {
@@ -412,10 +412,10 @@ where
     }
 }
 
-impl<T> Map<T>
+impl<Tile> Map<Tile>
 where
-    T: Clone + DisplayWidth + FromStr,
-    <T as FromStr>::Err: 'static + std::error::Error + Send + Sync,
+    Tile: Clone + DisplayWidth + FromStr,
+    <Tile as FromStr>::Err: 'static + std::error::Error + Send + Sync,
 {
     /// Try to convert the contents of a reader into a map.
     ///
@@ -439,9 +439,9 @@ where
         for line in input.lines() {
             let line = line?;
 
-            let mut row = Vec::with_capacity(line.len() / T::DISPLAY_WIDTH);
-            for chunk in T::chunks(&line) {
-                row.push(T::from_str(&chunk).map_err(|err| {
+            let mut row = Vec::with_capacity(line.len() / Tile::DISPLAY_WIDTH);
+            for chunk in Tile::chunks(&line) {
+                row.push(Tile::from_str(&chunk).map_err(|err| {
                     MapConversionErr::TileConversion(Box::new(err), chunk.to_string())
                 })?);
             }
@@ -464,10 +464,10 @@ where
     }
 }
 
-impl<T> TryFrom<&str> for Map<T>
+impl<Tile> TryFrom<&str> for Map<Tile>
 where
-    T: Clone + DisplayWidth + FromStr,
-    <T as FromStr>::Err: 'static + std::error::Error + Send + Sync,
+    Tile: Clone + DisplayWidth + FromStr,
+    <Tile as FromStr>::Err: 'static + std::error::Error + Send + Sync,
 {
     type Error = MapConversionErr;
 
@@ -478,10 +478,10 @@ where
     }
 }
 
-impl<T> TryFrom<std::fs::File> for Map<T>
+impl<Tile> TryFrom<std::fs::File> for Map<Tile>
 where
-    T: Clone + DisplayWidth + FromStr,
-    <T as FromStr>::Err: 'static + std::error::Error + Send + Sync,
+    Tile: Clone + DisplayWidth + FromStr,
+    <Tile as FromStr>::Err: 'static + std::error::Error + Send + Sync,
 {
     type Error = MapConversionErr;
 
@@ -492,10 +492,10 @@ where
     }
 }
 
-impl<T> TryFrom<&std::path::Path> for Map<T>
+impl<Tile> TryFrom<&std::path::Path> for Map<Tile>
 where
-    T: Clone + DisplayWidth + FromStr,
-    <T as FromStr>::Err: 'static + std::error::Error + Send + Sync,
+    Tile: Clone + DisplayWidth + FromStr,
+    <Tile as FromStr>::Err: 'static + std::error::Error + Send + Sync,
 {
     type Error = std::io::Error;
 
@@ -507,19 +507,19 @@ where
     }
 }
 
-impl<T> Index<(usize, usize)> for Map<T> {
-    type Output = T;
+impl<Tile> Index<(usize, usize)> for Map<Tile> {
+    type Output = Tile;
 
-    fn index(&self, (x, y): (usize, usize)) -> &T {
+    fn index(&self, (x, y): (usize, usize)) -> &Tile {
         self.tiles.index(self.point2index(x, y))
     }
 }
 
-impl<T> Index<Point> for Map<T> {
-    type Output = T;
+impl<Tile> Index<Point> for Map<Tile> {
+    type Output = Tile;
 
     /// Panics if `point.x < 0 || point.y < 0`
-    fn index(&self, point: Point) -> &T {
+    fn index(&self, point: Point) -> &Tile {
         assert!(
             point.x >= 0 && point.y >= 0,
             "point must be in the positive quadrant"
@@ -528,15 +528,15 @@ impl<T> Index<Point> for Map<T> {
     }
 }
 
-impl<T> IndexMut<(usize, usize)> for Map<T> {
-    fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut T {
+impl<Tile> IndexMut<(usize, usize)> for Map<Tile> {
+    fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut Tile {
         self.tiles.index_mut(self.point2index(x, y))
     }
 }
 
-impl<T> IndexMut<Point> for Map<T> {
+impl<Tile> IndexMut<Point> for Map<Tile> {
     /// Panics if `point.x < 0 || point.y < 0`
-    fn index_mut(&mut self, point: Point) -> &mut T {
+    fn index_mut(&mut self, point: Point) -> &mut Tile {
         assert!(
             point.x >= 0 && point.y >= 0,
             "point must be in the positive quadrant"
@@ -545,9 +545,9 @@ impl<T> IndexMut<Point> for Map<T> {
     }
 }
 
-impl<T> fmt::Display for Map<T>
+impl<Tile> fmt::Display for Map<Tile>
 where
-    T: fmt::Display + DisplayWidth,
+    Tile: fmt::Display + DisplayWidth,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for y in (self.low_y()..=self.high_y()).rev() {
@@ -556,7 +556,7 @@ where
                     f,
                     "{:width$}",
                     self.index(Point::new(x, y)),
-                    width = T::DISPLAY_WIDTH
+                    width = Tile::DISPLAY_WIDTH
                 )?;
             }
             writeln!(f)?;
@@ -640,9 +640,9 @@ pub enum RenderError {
     Gif(#[from] gif::EncodingError),
 }
 
-impl<T> Map<T>
+impl<Tile> Map<Tile>
 where
-    T: Clone + ContextInto<Traversable, Context = ()>,
+    Tile: Clone + ContextInto<Traversable, Context = ()>,
 {
     /// Visit every non-obstructed tile reachable from the initial point.
     ///
@@ -650,7 +650,7 @@ where
     /// points are visited.
     pub fn reachable_from<F>(&self, point: Point, visit: F)
     where
-        F: FnMut(&T, Point) -> bool,
+        F: FnMut(&Tile, Point) -> bool,
     {
         self.reachable_from_ctx(&(), point, visit)
     }
@@ -662,18 +662,18 @@ where
     }
 }
 
-impl<T: Clone + ContextInto<Traversable>> Map<T> {
+impl<Tile: Clone + ContextInto<Traversable>> Map<Tile> {
     /// Visit every non-obstructed tile reachable from the initial point.
     ///
     /// If the visitor ever returns true, processing halts and no further
     /// points are visited.
     pub fn reachable_from_ctx<F>(
         &self,
-        context: &<T as ContextInto<Traversable>>::Context,
+        context: &<Tile as ContextInto<Traversable>>::Context,
         point: Point,
         mut visit: F,
     ) where
-        F: FnMut(&T, Point) -> bool,
+        F: FnMut(&Tile, Point) -> bool,
     {
         let mut visited = bitvec!(0; self.tiles.len());
         let mut queue = VecDeque::new();
@@ -709,7 +709,7 @@ impl<T: Clone + ContextInto<Traversable>> Map<T> {
     // https://en.wikipedia.org/wiki/A*_search_algorithm#Pseudocode
     pub fn navigate_ctx(
         &self,
-        context: &<T as ContextInto<Traversable>>::Context,
+        context: &<Tile as ContextInto<Traversable>>::Context,
         from: Point,
         to: Point,
     ) -> Option<Vec<Direction>> {
