@@ -30,6 +30,11 @@ use std::time::Duration;
 ///
 /// - [`Map::new`] is most useful when the problem involves cartography.
 /// - When a map is provided as the day's input, use [`Map::try_from`]
+///
+/// ## Panics
+///
+/// Several internal methods assume that the width and height of the map can be
+/// represented in an `i32`. Very large maps may panic if that assumption is violated.
 #[derive(Clone, Default)]
 pub struct Map<T> {
     tiles: Vec<T>,
@@ -68,53 +73,85 @@ impl<T> Map<T> {
         map
     }
 
+    /// Width of this map.
+    #[inline]
     pub fn width(&self) -> usize {
         self.width
     }
 
+    /// Height of this map.
+    #[inline]
     pub fn height(&self) -> usize {
         self.height
     }
 
+    /// Offset of the lower left corner of this map from `(0, 0)`.
+    #[inline]
     pub fn offset(&self) -> Point {
         self.offset
     }
 
+    /// Lowest x coordinate which is in bounds of this map.
+    #[inline]
     pub fn low_x(&self) -> i32 {
         self.offset.x
     }
 
+    /// Highest x coordinate which is in bounds of this map.
+    ///
+    /// Note that this is inclusive; use `..=` when using this to bound a range.
+    #[inline]
     pub fn high_x(&self) -> i32 {
         self.offset.x + self.width as i32 - 1
     }
 
+    /// Lowest y coordinate which is in bounds of this map.
+    #[inline]
     pub fn low_y(&self) -> i32 {
         self.offset.y
     }
 
+    /// Highest y coordinate which is in bounds of this map.
+    ///
+    /// Note that this is inclusive; use `..=` when using this to bound a range.
+    #[inline]
     pub fn high_y(&self) -> i32 {
         self.offset.y + self.height as i32 - 1
     }
 
+    /// The coordinates of the bottom left corner of this map.
+    ///
+    /// This is inclusive; it is a valid index into the map.
+    #[inline]
     pub fn bottom_left(&self) -> Point {
-        self.offset
+        Point::new(self.low_x(), self.low_y())
     }
 
+    /// The coordinates of the top left corner of this map.
+    ///
+    /// This is inclusive; it is a valid index into the map.
+    #[inline]
     pub fn top_left(&self) -> Point {
-        Point::new(0, self.height.try_into().unwrap_or(i32::MAX) - 1) + self.offset
+        Point::new(self.low_x(), self.high_y())
     }
 
+    /// The coordinates of the bottom right corner of this map.
+    ///
+    /// This is inclusive; it is a valid index into the map.
+    #[inline]
     pub fn bottom_right(&self) -> Point {
-        Point::new(self.width.try_into().unwrap_or(i32::MAX) - 1, 0) + self.offset
+        Point::new(self.high_x(), self.low_y())
     }
 
+    /// The coordinates of the top right corner of this map.
+    ///
+    /// This is inclusive; it is a valid index into the map.
+    #[inline]
     pub fn top_right(&self) -> Point {
-        Point::new(
-            self.width.try_into().unwrap_or(i32::MAX) - 1,
-            self.height.try_into().unwrap_or(i32::MAX) - 1,
-        ) + self.offset
+        Point::new(self.high_x(), self.high_y())
     }
 
+    /// Iterate over the points and tiles of this map.
     pub fn iter(&self) -> impl Iterator<Item = (Point, &T)> {
         let index2point = self.make_offset_index2point();
         self.tiles
@@ -123,6 +160,7 @@ impl<T> Map<T> {
             .map(move |(idx, tile)| (index2point(idx), tile))
     }
 
+    /// Iterate over the points of this tiles in this map, with mutable access to the tiles.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
         let index2point = self.make_offset_index2point();
         self.tiles
@@ -137,17 +175,18 @@ impl<T> Map<T> {
         (0..self.tiles.len()).map(index2point)
     }
 
+    /// `true` when a point is legal within the bounds of this map.
+    #[inline]
     pub fn in_bounds(&self, point: Point) -> bool {
-        point.x >= 0
-            && point.y >= 0
-            && point.x < self.width.try_into().unwrap_or(i32::MAX)
-            && point.y < self.height.try_into().unwrap_or(i32::MAX)
+        point.x >= self.low_x()
+            && point.y >= self.low_y()
+            && point.x <= self.high_x()
+            && point.y <= self.high_y()
     }
 
     /// convert a 2d point into a 1d index into the tiles
     ///
     /// **Note**: doesn't take the offset into account
-    #[inline]
     fn point2index(&self, x: usize, y: usize) -> usize {
         x + (y * self.width)
     }
@@ -155,7 +194,6 @@ impl<T> Map<T> {
     /// convert a 1d index in the tiles into a 2d point
     ///
     /// **Note**: doesn't take the offset into account
-    #[inline]
     fn index2point(&self, idx: usize) -> (usize, usize) {
         (idx % self.width, idx / self.width)
     }
@@ -235,6 +273,7 @@ impl<T: Clone + Default> Map<T> {
     /// Create a new map of the specified dimensions.
     ///
     /// Its lower left corner is at `(0, 0)`.
+    #[inline]
     pub fn new(width: usize, height: usize) -> Map<T> {
         Self::new_offset(Point::default(), width, height)
     }
@@ -242,6 +281,7 @@ impl<T: Clone + Default> Map<T> {
     /// Create a new map of the specified dimensions.
     ///
     /// Its lower left corner is at `offset`.
+    #[inline]
     pub fn new_offset(offset: Point, width: usize, height: usize) -> Map<T> {
         Map {
             tiles: vec![T::default(); width * height],
@@ -252,13 +292,16 @@ impl<T: Clone + Default> Map<T> {
     }
 
     /// Create a copy of this map which has been flipped vertically: the axis of symmetry is horizontal.
+    ///
+    /// This does not adjust the offset; the corners remain where they previously were.
     pub fn flip_vertical(&self) -> Map<T> {
-        let mut flipped = Map::new(self.width, self.height);
+        let mut flipped = Map::new_offset(self.offset, self.width, self.height);
 
-        for y in 0..self.height {
-            let flipped_y = self.height - y - 1;
-            for x in 0..self.width {
-                flipped[(x, flipped_y)] = self[(x, y)].clone();
+        for y in 0..(self.height as i32) {
+            let flipped_y = self.high_y() - y;
+            let non_flipped_y = self.low_y() + y;
+            for x in self.low_x()..=self.high_x() {
+                flipped[Point::new(x, flipped_y)] = self[Point::new(x, non_flipped_y)].clone();
             }
         }
 
@@ -267,7 +310,7 @@ impl<T: Clone + Default> Map<T> {
 
     /// Create a copy of this map which has been flipped horizontally; the axis of symmetry is vertical.
     pub fn flip_horizontal(&self) -> Map<T> {
-        let mut flipped = Map::new(self.width, self.height);
+        let mut flipped = Map::new_offset(self.offset, self.width, self.height);
 
         for y in 0..self.height {
             for x in 0..self.width {
@@ -311,12 +354,16 @@ impl<T: std::hash::Hash> std::hash::Hash for Map<T> {
         self.tiles.hash(state);
         self.width.hash(state);
         self.height.hash(state);
+        self.offset.hash(state);
     }
 }
 
 impl<T: PartialEq> PartialEq for Map<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.width == other.width && self.height == other.height && self.tiles == other.tiles
+        self.width == other.width
+            && self.height == other.height
+            && self.tiles == other.tiles
+            && self.offset == other.offset
     }
 }
 
