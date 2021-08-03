@@ -744,10 +744,7 @@ where
     ///
     /// If the visitor ever returns true, processing halts and no further
     /// points are visited.
-    pub fn reachable_from<F>(&self, point: Point, visit: F)
-    where
-        F: FnMut(&Tile, Point) -> bool,
-    {
+    pub fn reachable_from(&self, point: Point, visit: impl FnMut(Point, &Tile) -> bool) {
         self.reachable_from_ctx(&(), point, visit)
     }
 
@@ -763,19 +760,17 @@ impl<Tile: Clone + ContextInto<Traversable>> Map<Tile> {
     ///
     /// If the visitor ever returns true, processing halts and no further
     /// points are visited.
-    pub fn reachable_from_ctx<F>(
+    pub fn reachable_from_ctx(
         &self,
         context: &<Tile as ContextInto<Traversable>>::Context,
         point: Point,
-        mut visit: F,
-    ) where
-        F: FnMut(&Tile, Point) -> bool,
-    {
+        mut visit: impl FnMut(Point, &Tile) -> bool,
+    ) {
         let mut visited = bitvec!(0; self.tiles.len());
         let mut queue = VecDeque::new();
         queue.push_back(point);
 
-        let idx = |point: Point| point.x as usize + (point.y as usize * self.width);
+        let idx = |point: Point| self.point2index(point.x as usize, point.y as usize);
 
         while let Some(point) = queue.pop_front() {
             // we may have scheduled a single point more than once via alternate paths;
@@ -786,7 +781,11 @@ impl<Tile: Clone + ContextInto<Traversable>> Map<Tile> {
 
             visited.set(idx(point), true);
             let traversable = self[point].clone().ctx_into(point, context);
-            if traversable != Traversable::Obstructed && visit(&self[point], point) {
+            if traversable == Traversable::Obstructed {
+                continue;
+            }
+
+            if visit(point, self.index(point)) {
                 break;
             }
 
