@@ -100,6 +100,7 @@ pub fn n_pixels_for(width: usize, height: usize) -> usize {
 }
 
 pub type Encoder = gif::Encoder<std::io::BufWriter<std::fs::File>>;
+pub type EncodingError = gif::EncodingError;
 
 /// An `Animation` holds a handle to an unfinished gif animation.
 ///
@@ -122,7 +123,7 @@ impl Animation {
         mut encoder: Encoder,
         frame_duration: Duration,
         style: Style,
-    ) -> Result<Animation, gif::EncodingError> {
+    ) -> Result<Animation, EncodingError> {
         encoder.set_repeat(gif::Repeat::Infinite)?;
 
         // delay is set in hundredths of a second
@@ -140,7 +141,7 @@ impl Animation {
     ///
     /// This frame will be visible for the duration specified at the animation's
     /// creation.
-    pub fn write_frame<Tile: ToRgb>(&mut self, map: &Map<Tile>) -> Result<(), gif::EncodingError> {
+    pub fn write_frame<Tile: ToRgb>(&mut self, map: &Map<Tile>) -> Result<(), EncodingError> {
         self.encoder.write_frame(&map.render_frame(self.style))
     }
 }

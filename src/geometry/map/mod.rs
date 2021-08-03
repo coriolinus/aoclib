@@ -12,5 +12,5 @@ pub use context_conversions::{ContextFrom, ContextInto};
 pub use edge::Edge;
 pub use map::{Map, MapConversionErr};
 #[cfg(feature = "map-render")]
-pub use render::{Animation, Style};
+pub use render::{Animation, EncodingError, Style};
 pub use traversable::Traversable;
