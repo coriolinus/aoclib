@@ -1,5 +1,5 @@
 use smallstr::SmallString;
-use std::{marker::PhantomData, ops::Not};
+use std::{convert::TryFrom, marker::PhantomData, ops::Not};
 
 /// Number of characters below which the [`Chunks`] iterator does not allocate.
 pub const CHUNK_WIDTH: usize = 4;
@@ -115,5 +115,96 @@ impl ToRgb for Bool {
         } else {
             [0, 0, 0]
         }
+    }
+}
+
+/// A Tile which contains a single digit.
+///
+/// Its range is `0..=9`.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    parse_display::Display,
+    parse_display::FromStr,
+)]
+#[from_str(regex = r"(?P<0>\d)")]
+pub struct Digit(u8);
+
+impl DisplayWidth for Digit {
+    const DISPLAY_WIDTH: usize = 1;
+}
+
+impl From<Digit> for u8 {
+    fn from(Digit(value): Digit) -> Self {
+        value
+    }
+}
+
+impl TryFrom<u8> for Digit {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        (value < 10).then(move || Digit(value)).ok_or(())
+    }
+}
+
+impl ToRgb for Digit {
+    fn to_rgb(&self) -> [u8; 3] {
+        const STEP: u8 = u8::MAX / 9;
+        let value = self.0 * STEP;
+        [value, value, value]
+    }
+}
+
+/// A Tile which contains two digits.
+///
+/// Its range is `0..=99`.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    parse_display::Display,
+    parse_display::FromStr,
+)]
+#[display(" {0:02}")]
+#[from_str(regex = r"  ?(?P<0>\d?\d)")]
+pub struct TwoDigits(u8);
+
+impl DisplayWidth for TwoDigits {
+    const DISPLAY_WIDTH: usize = 3;
+}
+
+impl From<TwoDigits> for u8 {
+    fn from(TwoDigits(value): TwoDigits) -> Self {
+        value
+    }
+}
+
+impl TryFrom<u8> for TwoDigits {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        (value < 100).then(move || TwoDigits(value)).ok_or(())
+    }
+}
+
+impl ToRgb for TwoDigits {
+    fn to_rgb(&self) -> [u8; 3] {
+        const STEP: u8 = u8::MAX / 99;
+        let value = self.0 * STEP;
+        [value, value, value]
     }
 }

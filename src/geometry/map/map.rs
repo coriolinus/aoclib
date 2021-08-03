@@ -392,7 +392,7 @@ impl<Tile: Clone + Default> Map<Tile> {
 
         let mut rotated = Map::new(self.height, self.width);
 
-        let rotated_origin = self.bottom_right();
+        let rotated_origin = rotated.bottom_right();
         for point in self.points() {
             let rotated_point = point.rotate_left() + rotated_origin;
             rotated[rotated_point] = self[point].clone();
@@ -419,13 +419,24 @@ impl<Tile: Clone + Default> Map<Tile> {
 
         let mut rotated = Map::new(self.height, self.width);
 
-        let rotated_origin = self.top_left();
+        let rotated_origin = rotated.top_left();
         for point in self.points() {
             let rotated_point = point.rotate_right() + rotated_origin;
             rotated[rotated_point] = self[point].clone();
         }
 
         rotated
+    }
+}
+
+impl<Tile> fmt::Debug for Map<Tile> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct(&format!("Map<{}>", std::any::type_name::<Tile>()))
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .field("offset", &self.offset)
+            .field("tiles", &format_args!("[...; {}]", self.tiles.len()))
+            .finish()
     }
 }
 
@@ -636,7 +647,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for y in (self.low_y()..=self.high_y()).rev() {
-            for x in self.low_x()..self.high_x() {
+            for x in self.low_x()..=self.high_x() {
                 write!(
                     f,
                     "{:width$}",
@@ -891,7 +902,8 @@ pub enum MapConversionErr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
+    use crate::geometry::map::tile::Digit;
+    use std::{collections::HashSet, convert::TryInto};
 
     #[test]
     fn test_procedural() {
@@ -995,5 +1007,107 @@ mod tests {
         assert_eq!(map.height, 2);
         assert_eq!(map.offset, Point::new(1, 0));
         assert_eq!(map.tiles, vec![1, 2]);
+    }
+
+    #[test]
+    fn test_flip_vertical() {
+        let map = Map::procedural_offset(Point::new(3, 2), 2, 3, |point| point.x + point.y);
+        let bottom_left = map.bottom_left();
+        let top_right = map.top_right();
+        assert_eq!(map.tiles, vec![5, 6, 6, 7, 7, 8]);
+
+        let flip_map = map.flip_vertical();
+        assert_eq!(flip_map.bottom_left(), bottom_left);
+        assert_eq!(flip_map.top_right(), top_right);
+
+        assert_eq!(flip_map.width, 2);
+        assert_eq!(flip_map.height, 3);
+        assert_eq!(flip_map.tiles, vec![7, 8, 6, 7, 5, 6]);
+
+        assert_eq!(flip_map.flip_vertical(), map);
+    }
+
+    #[test]
+    fn test_flip_horizontal() {
+        let map = Map::procedural_offset(Point::new(3, 2), 2, 3, |point| point.x + point.y);
+        let bottom_left = map.bottom_left();
+        let top_right = map.top_right();
+        assert_eq!(map.tiles, vec![5, 6, 6, 7, 7, 8]);
+
+        let flip_map = map.flip_horizontal();
+        assert_eq!(flip_map.bottom_left(), bottom_left);
+        assert_eq!(flip_map.top_right(), top_right);
+
+        assert_eq!(flip_map.width, 2);
+        assert_eq!(flip_map.height, 3);
+        assert_eq!(flip_map.tiles, vec![6, 5, 7, 6, 8, 7]);
+
+        assert_eq!(flip_map.flip_horizontal(), map);
+    }
+
+    #[test]
+    fn test_rotate_left() {
+        let map = Map::<Digit>::procedural(3, 2, |point| {
+            ((point.x + point.y) as u8).try_into().unwrap()
+        });
+        assert_eq!(
+            map.tiles
+                .iter()
+                .map(|&digit| digit.into())
+                .collect::<Vec<u8>>(),
+            vec![0, 1, 2, 1, 2, 3]
+        );
+
+        let rotated_map = map.rotate_left();
+
+        println!("{}", map);
+        println!("{}", rotated_map);
+
+        assert_eq!(rotated_map.width, 2);
+        assert_eq!(rotated_map.height, 3);
+        assert_eq!(rotated_map.offset, Point::default());
+        assert_eq!(
+            rotated_map
+                .tiles
+                .iter()
+                .map(|&digit| digit.into())
+                .collect::<Vec<u8>>(),
+            vec![1, 0, 2, 1, 3, 2],
+        );
+
+        assert_eq!(rotated_map.rotate_right(), map);
+    }
+
+    #[test]
+    fn test_rotate_right() {
+        let map = Map::<Digit>::procedural(3, 2, |point| {
+            ((point.x + point.y) as u8).try_into().unwrap()
+        });
+        assert_eq!(
+            map.tiles
+                .iter()
+                .map(|&digit| digit.into())
+                .collect::<Vec<u8>>(),
+            vec![0, 1, 2, 1, 2, 3]
+        );
+
+        let rotated_map = map.rotate_right();
+
+        println!("{}", map);
+        println!("{}", rotated_map);
+
+        assert_eq!(rotated_map.width, 2);
+        assert_eq!(rotated_map.height, 3);
+        assert_eq!(rotated_map.offset, Point::default());
+        assert_eq!(
+            rotated_map
+                .tiles
+                .iter()
+                .map(|&digit| digit.into())
+                .collect::<Vec<u8>>(),
+            vec![2, 3, 1, 2, 0, 1],
+        );
+
+        assert_eq!(rotated_map.rotate_left(), map);
     }
 }
