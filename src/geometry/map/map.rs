@@ -310,13 +310,6 @@ impl<Tile: Clone> Map<Tile> {
             }
         }
 
-        debug_assert!(min.x <= max.x || self.width * self.height == 0);
-        debug_assert!(min.y <= max.y || self.width * self.height == 0);
-        debug_assert!(min.x >= self.low_x());
-        debug_assert!(min.y >= self.low_y());
-        debug_assert!(max.x <= self.high_x());
-        debug_assert!(max.y <= self.high_y());
-
         let width = (max.x - min.x + 1) as usize;
         let height = (max.y - min.y + 1) as usize;
         let offset = min;
@@ -893,4 +886,114 @@ pub enum MapConversionErr {
     NotRectangular,
     #[error(transparent)]
     Io(#[from] std::io::Error),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_procedural() {
+        let map = Map::procedural(2, 2, |point| point.x + point.y);
+        assert_eq!(map.width, 2);
+        assert_eq!(map.height, 2);
+        assert_eq!(map.offset, Point::default());
+        assert_eq!(map.tiles, vec![0, 1, 1, 2]);
+        assert!(map.iter().all(|(point, &tile)| point.x + point.y == tile));
+    }
+
+    #[test]
+    fn test_procedural_offset() {
+        let map = Map::procedural_offset(Point::new(2, 1), 2, 2, |point| point.x + point.y);
+        assert_eq!(map.width, 2);
+        assert_eq!(map.height, 2);
+        assert_eq!(map.offset, Point::new(2, 1));
+        assert_eq!(map.tiles, vec![3, 4, 4, 5]);
+        assert!(map.iter().all(|(point, &tile)| point.x + point.y == tile));
+    }
+
+    #[test]
+    fn test_point_index_conversion_no_offset() {
+        const EDGE: usize = 256;
+        const AREA: usize = EDGE * EDGE;
+
+        let map = Map::<()>::new(EDGE, EDGE);
+        let mut emitted_points = HashSet::new();
+        for idx in 0..AREA {
+            let point = map.index2point(idx);
+            assert!(
+                emitted_points.insert(point),
+                "no duplicate point should ever be emitted"
+            );
+            assert_eq!(idx, map.point2index(point.x as usize, point.y as usize));
+        }
+    }
+
+    #[test]
+    fn test_point_index_conversion_with_offset() {
+        const EDGE: usize = 256;
+        const AREA: usize = EDGE * EDGE;
+
+        let map = Map::<()>::new_offset(Point::new(3, 2), EDGE, EDGE);
+        let mut emitted_points = HashSet::new();
+        for idx in 0..AREA {
+            let point = map.index2point(idx);
+            assert!(
+                emitted_points.insert(point),
+                "no duplicate point should ever be emitted"
+            );
+            assert_eq!(idx, map.point2index(point.x as usize, point.y as usize));
+        }
+    }
+
+    #[test]
+    fn test_boundaries_no_offset() {
+        const EDGE: usize = 256;
+
+        let map = Map::<()>::new(EDGE, EDGE);
+
+        assert_eq!(map.low_x(), 0);
+        assert_eq!(map.high_x(), 255);
+        assert_eq!(map.low_y(), 0);
+        assert_eq!(map.high_y(), 255);
+    }
+
+    #[test]
+    fn test_boundaries_with_offset() {
+        const EDGE: usize = 256;
+
+        let map = Map::<()>::new_offset(Point::new(3, 2), EDGE, EDGE);
+
+        assert_eq!(map.low_x(), 3);
+        assert_eq!(map.high_x(), EDGE as i32 + 3 - 1);
+        assert_eq!(map.low_y(), 2);
+        assert_eq!(map.high_y(), EDGE as i32 + 2 - 1);
+    }
+
+    #[test]
+    fn test_translate() {
+        let mut map = Map::procedural(2, 2, |point| point.x + point.y);
+        map.translate(2, 1);
+
+        assert_eq!(map.width, 2);
+        assert_eq!(map.height, 2);
+        assert_eq!(map.offset, Point::new(2, 1));
+        assert_eq!(map.tiles, vec![0, 1, 1, 2]);
+        assert!(map.iter().all(|(point, &tile)| {
+            let point = point - map.offset;
+            point.x + point.y == tile
+        }));
+    }
+
+    #[test]
+    fn test_extract_interesting_region() {
+        let map = Map::procedural(2, 2, |point| point.x + point.y);
+        let map = map.extract_interesting_region(|point, _tile| point.x != 0);
+
+        assert_eq!(map.width, 1);
+        assert_eq!(map.height, 2);
+        assert_eq!(map.offset, Point::new(1, 0));
+        assert_eq!(map.tiles, vec![1, 2]);
+    }
 }
