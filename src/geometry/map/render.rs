@@ -55,7 +55,7 @@ pub fn render_point<Tile: ToRgb>(
     let x = |point: Point| point.x as usize;
     let y = |point: Point| point.y as usize;
 
-    let row_pixels = pixel_width(width) as usize;
+    let row_pixels = pixel_size(width) as usize;
 
     // the linear index of a position has the following components:
     //
@@ -86,14 +86,9 @@ pub fn render_point<Tile: ToRgb>(
     }
 }
 
-/// Each tile is 4px wide, with a 2px margin on the outside edges of the image.
-pub fn pixel_width(width: usize) -> u16 {
+/// Each tile is 4px high and wide, with a 2px margin on the outside edges of the image.
+pub fn pixel_size(width: usize) -> u16 {
     ((width + 1) * 4) as u16
-}
-
-/// Each tile is 4px high, with a 2px margin on the outside edges of the image.
-pub fn pixel_height(height: usize) -> u16 {
-    ((height + 1) * 4) as u16
 }
 
 /// Total pixels in an image for a map
@@ -101,7 +96,7 @@ pub fn pixel_height(height: usize) -> u16 {
 /// Each tile is 4px high and 4px wide, with a 2px margin on the outside
 /// edges of the image.
 pub fn n_pixels_for(width: usize, height: usize) -> usize {
-    pixel_width(width) as usize * pixel_height(height) as usize
+    pixel_size(width) as usize * pixel_size(height) as usize
 }
 
 pub type Encoder = gif::Encoder<std::io::BufWriter<std::fs::File>>;
