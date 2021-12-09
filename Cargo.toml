@@ -23,6 +23,7 @@ thiserror = "1.0.22"
 toml = "0.5.8"
 
 [dev-dependencies]
+derive_more = "0.99.17"
 parse-display = "0.4.1"
 
 [features]

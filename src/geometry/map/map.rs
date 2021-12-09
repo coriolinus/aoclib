@@ -775,11 +775,12 @@ impl<Tile: Clone + ContextInto<Traversable>> Map<Tile> {
         while let Some(point) = queue.pop_front() {
             // we may have scheduled a single point more than once via alternate paths;
             // we should only actually visit once.
-            if visited[idx(point)] {
+            let index = idx(point);
+            if visited[index] {
                 continue;
             }
 
-            visited.set(idx(point), true);
+            visited.set(index, true);
             let traversable = self[point].clone().ctx_into(point, context);
             if traversable == Traversable::Obstructed {
                 continue;
@@ -790,8 +791,7 @@ impl<Tile: Clone + ContextInto<Traversable>> Map<Tile> {
             }
 
             if traversable == Traversable::Free {
-                for direction in Direction::iter() {
-                    let neighbor = point + direction;
+                for neighbor in self.orthogonal_adjacencies(point) {
                     if !visited[idx(neighbor)] {
                         queue.push_back(neighbor);
                     }
