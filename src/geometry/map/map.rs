@@ -185,6 +185,17 @@ impl<Tile> Map<Tile> {
             && point.y <= self.high_y()
     }
 
+    /// Make a function which returns `true` when the parameter is within the bounds of this map,
+    /// without depending on the lifetime of `self`.
+    pub fn make_in_bounds(&self) -> impl Fn(Point) -> bool {
+        let low_x = self.low_x();
+        let low_y = self.low_y();
+        let high_x = self.high_x();
+        let high_y = self.high_y();
+
+        move |point| point.x >= low_x && point.y >= low_y && point.x <= high_x && point.y <= high_y
+    }
+
     /// convert a 2d point into a 1d index into the tiles
     fn point2index(&self, x: usize, y: usize) -> usize {
         let x = (x as i32 - self.offset.x) as usize;
@@ -220,13 +231,51 @@ impl<Tile> Map<Tile> {
         )
     }
 
-    /// Return an iterator of all legal points orthogonally adjacent to the given point.
+    /// Return an iterator of all legal points orthogonally adjacent to the given point,
     ///
     /// This iterator will return up to 4 elements; it does not include diagonals.
     pub fn orthogonal_adjacencies(&self, point: Point) -> impl '_ + Iterator<Item = Point> {
         Direction::iter()
             .map(move |direction| point + direction)
             .filter(move |&point| self.in_bounds(point))
+    }
+
+    /// Return an iterator of all legal points adjacent to the given point,
+    /// without depending on the lifetime of `self`.
+    ///
+    /// This iterator will return up to 8 elements; it includes diagonals.
+    ///
+    /// This introduces a bound that the `Tile` type must not contain any references.
+    /// It is also slightly less efficient than [`self.adjacencies`]. In general,
+    /// that function should be preferred unless there are lifetime conflicts.
+    pub fn make_adjacencies(&self, point: Point) -> impl Iterator<Item = Point>
+    where
+        Tile: 'static,
+    {
+        let in_bounds = self.make_in_bounds();
+        self.make_orthogonal_adjacencies(point).chain(
+            Direction::iter_diag()
+                .map(move |(vertical, horizontal)| point + vertical + horizontal)
+                .filter(move |&point| in_bounds(point)),
+        )
+    }
+
+    /// Return an iterator of all legal points orthogonally adjacent to the given point,
+    /// without depending on the lifetime of `self`.
+    ///
+    /// This iterator will return up to 4 elements; it does not include diagonals.
+    ///
+    /// This introduces a bound that the `Tile` type must not contain any references.
+    /// It is also slightly less efficient than [`self.orthogonal_adjacencies`]. In general,
+    /// that function should be preferred unless there are lifetime conflicts.
+    pub fn make_orthogonal_adjacencies(&self, point: Point) -> impl Iterator<Item = Point>
+    where
+        Tile: 'static,
+    {
+        let in_bounds = self.make_in_bounds();
+        Direction::iter()
+            .map(move |direction| point + direction)
+            .filter(move |&point| in_bounds(point))
     }
 
     /// Return an iterator of all legal points arrived at by applying the given deltas to the origin.
