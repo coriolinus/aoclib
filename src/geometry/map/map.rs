@@ -288,6 +288,23 @@ impl<Tile> Map<Tile> {
         self.offset.x += dx;
         self.offset.y += dy;
     }
+
+    /// Convert the underlying tile type of a map.
+    ///
+    /// This produces a new map whose tiles are of a new underlying type.
+    pub fn convert_tile_type<NewTile>(self) -> Map<NewTile>
+    where
+        Tile: Into<NewTile>,
+    {
+        let mut tiles = Vec::with_capacity(self.tiles.len());
+        tiles.extend(self.tiles.into_iter().map(Into::into));
+        Map {
+            tiles,
+            width: self.width,
+            height: self.height,
+            offset: self.offset,
+        }
+    }
 }
 
 impl<Tile: Clone> Map<Tile> {
