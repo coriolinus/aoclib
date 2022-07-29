@@ -12,10 +12,10 @@ gif = { version = "0.11.1", optional = true }
 itertools = "0.10.0"
 lazy_static = "1.4.0"
 num = "0.3.1"
-parse-display = "0.4.0"
+parse-display = "0.5.5"
 rand = { version = "0.8.0", optional = true }
 regex = "1.4.2"
-reqwest = { version = "0.10.10", features = [ "blocking", "gzip", "cookies" ] }
+reqwest = { version = "0.11.11", features = [ "blocking", "gzip", "cookies" ] }
 serde = { version = "1.0.118", features = [ "derive" ] }
 serde_with = "1.8.1"
 smallstr = "0.2.0"
@@ -24,7 +24,6 @@ toml = "0.5.8"
 
 [dev-dependencies]
 derive_more = "0.99.17"
-parse-display = "0.4.1"
 
 [features]
 map-render = [ "gif", "rand" ]
