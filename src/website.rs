@@ -21,6 +21,7 @@ pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
     }
 
     let client = reqwest::blocking::Client::builder()
+        .user_agent("https://github.com/coriolinus/aoclib")
         .gzip(true)
         .timeout(std::time::Duration::from_secs(5))
         .build()
