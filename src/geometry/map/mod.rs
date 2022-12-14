@@ -10,6 +10,8 @@ pub mod tile;
 
 pub use context_conversions::{ContextFrom, ContextInto};
 pub use edge::Edge;
+#[cfg(feature = "map-render")]
+pub use map::RenderError;
 pub use map::{Map, MapConversionErr};
 #[cfg(feature = "map-render")]
 pub use render::{Animation, EncodingError, Style};
