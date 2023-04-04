@@ -55,8 +55,8 @@ impl Config {
     }
 
     pub fn load() -> Result<Self, Error> {
-        let data = std::fs::read(path())?;
-        toml::de::from_slice(&data).map_err(Into::into)
+        let data = std::fs::read_to_string(path())?;
+        toml::de::from_str(&data).map_err(Into::into)
     }
 
     fn input_files_inner(&self, year: u32) -> Option<PathBuf> {
@@ -163,7 +163,8 @@ day_template = "/future/days"
     fn can_serialize() {
         let mut config = Config::default();
         config.session = "foo bar session session".into();
-        config.paths.entry(1984).or_default().implementation = Some("/aoc/was/definitely/a/thing".into());
+        config.paths.entry(1984).or_default().implementation =
+            Some("/aoc/was/definitely/a/thing".into());
 
         {
             let paths = Paths {
