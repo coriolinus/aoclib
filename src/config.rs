@@ -150,13 +150,13 @@ implementation = "/what/future"
 input_files = "/what/future/has/inputs"
 day_template = "/future/days"
 "#;
-        let _: Config = toml::de::from_slice(TOML_DATA.as_bytes()).unwrap();
+        let _: Config = toml::de::from_str(TOML_DATA).unwrap();
     }
 
     #[test]
     fn can_deserialize_without_paths() {
         const TOML_DATA: &str = r#"session = "I'm a session key!""#;
-        let _: Config = toml::de::from_slice(TOML_DATA.as_bytes()).unwrap();
+        let _: Config = toml::de::from_str(TOML_DATA).unwrap();
     }
 
     #[test]
