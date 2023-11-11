@@ -78,6 +78,11 @@ impl Config {
         self.input_files(year).join(format!("input-{:02}.txt", day))
     }
 
+    /// Path to a timestamp file containing the time of the previous successful download.
+    pub fn throttle_file(&self) -> PathBuf {
+        data().join(".dl-throttle-until")
+    }
+
     /// Set the input files directory for `year`.
     pub fn set_input_files(&mut self, year: u32, path: PathBuf) {
         self.paths.entry(year).or_default().input_files = Some(path);

@@ -1,5 +1,6 @@
 use crate::config::Config;
 use thiserror::Error;
+use time::{format_description::well_known::Rfc3339, Duration, OffsetDateTime};
 
 /// Generate the puzzle URL for a given day
 pub fn url_for_day(year: u32, day: u8) -> String {
@@ -11,10 +12,47 @@ pub fn input_url_for_day(year: u32, day: u8) -> String {
     format!("{}/input", url_for_day(year, day))
 }
 
+fn throttle(config: &Config) -> Result<(), Error> {
+    let path = config.throttle_file();
+    let Ok(contents) = std::fs::read_to_string(path) else {
+        // if we can't read the file, most likely the issue is that it doesn't exist;
+        // in that case, we're fine to download
+        return Ok(());
+    };
+    let Ok(dl_available) = OffsetDateTime::parse(contents.trim(), &Rfc3339) else {
+        // malformed file? we solve the issue by trying again
+        return Ok(());
+    };
+    if OffsetDateTime::now_utc() < dl_available {
+        let dl_available = dl_available
+            .format(&Rfc3339)
+            .unwrap_or("unrenderable time".into());
+        Err(Error::Throttled(dl_available))
+    } else {
+        Ok(())
+    }
+}
+
+/// best effort to update the throttle file
+///
+/// On failure, just abort
+fn update_throttle_file(config: &Config) {
+    let path = config.throttle_file();
+    let dl_available = OffsetDateTime::now_utc() + Duration::seconds(900); // 15 minutes
+    let Ok(dl_available) = dl_available.format(&Rfc3339) else {
+        return;
+    };
+    let _ = std::fs::write(path, dl_available);
+}
+
 /// Download the day's input file
 ///
 /// If the file already exists, silently does nothing. This prevents server spam.
+///
+/// Regardless of the file's existence, throttles requests to once every 15 minutes.
 pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
+    throttle(config)?;
+
     let input_path = config.input_for(year, day);
     if input_path.exists() {
         return Ok(());
@@ -28,7 +66,7 @@ pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
         .map_err(Error::ClientBuilder)?;
 
     let mut response = client
-        .get(&input_url_for_day(year, day))
+        .get(input_url_for_day(year, day))
         .header(
             reqwest::header::COOKIE,
             format!("session={}", config.session),
@@ -47,6 +85,8 @@ pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
     let mut file = std::fs::File::create(input_path)?;
     response.copy_to(&mut file).map_err(Error::Downloading)?;
 
+    update_throttle_file(config);
+
     Ok(())
 }
 
@@ -62,4 +102,6 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("downloading to local file")]
     Downloading(#[source] reqwest::Error),
+    #[error("download throttled; next available DL {0}")]
+    Throttled(String),
 }
