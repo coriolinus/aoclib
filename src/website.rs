@@ -38,7 +38,8 @@ fn throttle(config: &Config) -> Result<(), Error> {
 /// On failure, just abort
 fn update_throttle_file(config: &Config) {
     let path = config.throttle_file();
-    let dl_available = OffsetDateTime::now_utc() + Duration::seconds(900); // 15 minutes
+    let dl_available = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc())
+        + Duration::seconds(900); // 15 minutes
     let Ok(dl_available) = dl_available.format(&Rfc3339) else {
         return;
     };

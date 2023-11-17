@@ -20,7 +20,7 @@ serde = { version = "1.0.192", features = [ "derive" ] }
 serde_with = "3.4.0"
 smallstr = "0.3.0"
 thiserror = "1.0.50"
-time = { version = "0.3.30", features = ["parsing", "formatting"] }
+time = { version = "0.3.30", features = ["parsing", "formatting", "local-offset"] }
 toml = "0.8.8"
 
 [dev-dependencies]
