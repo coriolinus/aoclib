@@ -49,14 +49,14 @@ fn update_throttle_file(config: &Config) {
 ///
 /// If the file already exists, silently does nothing. This prevents server spam.
 ///
-/// Regardless of the file's existence, throttles requests to once every 15 minutes.
+/// If the file does not exist, throttles server requests to once every 15 minutes.
 pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
-    throttle(config)?;
-
     let input_path = config.input_for(year, day);
     if input_path.exists() {
         return Ok(());
     }
+
+    throttle(config)?;
 
     let client = reqwest::blocking::Client::builder()
         .user_agent("https://github.com/coriolinus/aoclib")
