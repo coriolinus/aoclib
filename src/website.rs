@@ -38,7 +38,8 @@ fn throttle(config: &Config) -> Result<(), Error> {
 /// On failure, just abort
 fn update_throttle_file(config: &Config) {
     let path = config.throttle_file();
-    let dl_available = OffsetDateTime::now_utc() + Duration::seconds(900); // 15 minutes
+    let dl_available = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc())
+        + Duration::seconds(900); // 15 minutes
     let Ok(dl_available) = dl_available.format(&Rfc3339) else {
         return;
     };
@@ -49,14 +50,14 @@ fn update_throttle_file(config: &Config) {
 ///
 /// If the file already exists, silently does nothing. This prevents server spam.
 ///
-/// Regardless of the file's existence, throttles requests to once every 15 minutes.
+/// If the file does not exist, throttles server requests to once every 15 minutes.
 pub fn get_input(config: &Config, year: u32, day: u8) -> Result<(), Error> {
-    throttle(config)?;
-
     let input_path = config.input_for(year, day);
     if input_path.exists() {
         return Ok(());
     }
+
+    throttle(config)?;
 
     let client = reqwest::blocking::Client::builder()
         .user_agent("https://github.com/coriolinus/aoclib")
