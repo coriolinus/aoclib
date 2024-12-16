@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use super::Point;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Direction {
     Right,
     Left,
