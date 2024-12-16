@@ -3,9 +3,11 @@ use std::convert::TryFrom;
 use super::Point;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum Direction {
     Right,
     Left,
+    #[default]
     Up,
     Down,
 }
@@ -69,11 +71,6 @@ impl Direction {
     }
 }
 
-impl Default for Direction {
-    fn default() -> Self {
-        Direction::Up
-    }
-}
 
 /// Inverse of [`Direction::deltas`].
 impl TryFrom<Point> for Direction {

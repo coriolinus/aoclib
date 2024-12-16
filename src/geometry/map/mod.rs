@@ -1,6 +1,8 @@
 mod a_star;
 mod context_conversions;
 mod edge;
+// This interior module is private; we reexport its contents.
+#[allow(clippy::module_inception)]
 mod map;
 #[cfg(feature = "map-render")]
 mod render;

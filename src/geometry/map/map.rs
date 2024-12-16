@@ -4,7 +4,8 @@ use bitvec::bitvec;
 use std::{
     collections::{BinaryHeap, HashMap, VecDeque},
     convert::TryFrom,
-    fmt, hash,
+    fmt::{self, Write as _},
+    hash,
     ops::{Index, IndexMut},
     str::FromStr,
 };
@@ -727,6 +728,51 @@ where
             writeln!(f)?;
         }
         Ok(())
+    }
+}
+
+impl<Tile> Map<Tile>
+where
+    Tile: fmt::Display + DisplayWidth,
+{
+    /// Produce a string from this `Map`, with certain tiles overridden.
+    ///
+    /// This does not edit the map, just adjusts its presentation.
+    ///
+    /// ## Panics
+    ///
+    /// - If an override value's returned string is not the same length as `Tile::DISPLAY_WIDTH`.
+    pub fn to_string_with_override(
+        &self,
+        override_tiles: impl Fn(Point, &Tile) -> Option<String>,
+    ) -> String {
+        let mut out =
+            String::with_capacity((self.width() * Tile::DISPLAY_WIDTH + 1) * self.height());
+        for y in (self.low_y()..=self.high_y()).rev() {
+            for x in self.low_x()..=self.high_x() {
+                let point = Point::new(x, y);
+                let tile = self.index(Point::new(x, y));
+                match override_tiles(point, tile) {
+                    Some(override_str) => {
+                        assert_eq!(
+                            override_str.len(),
+                            Tile::DISPLAY_WIDTH,
+                            "override string length must match display width"
+                        );
+                        out.push_str(&override_str);
+                    }
+                    None => write!(
+                        &mut out,
+                        "{:width$}",
+                        self.index(Point::new(x, y)),
+                        width = Tile::DISPLAY_WIDTH
+                    )
+                    .expect("writing to a string always succeeds"),
+                }
+            }
+            out.push('\n');
+        }
+        out
     }
 }
 

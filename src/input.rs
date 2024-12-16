@@ -40,7 +40,7 @@ where
 /// If any record cannot be parsed, this prints the parse error on stderr and stops iteration.
 ///
 /// See also [`parse`] for equivalent functionality for input files.
-pub fn parse_str<'a, T>(data: &'a str) -> std::io::Result<impl '_ + Iterator<Item = T>>
+pub fn parse_str<'a, T>(data: &'a str) -> std::io::Result<impl 'a + Iterator<Item = T>>
 where
     T: 'a + FromStr,
     <T as FromStr>::Err: std::fmt::Display,
@@ -76,7 +76,7 @@ where
         reader.read_line(&mut buf).ok().and_then(|_| {
             line += 1;
             (!buf.is_empty())
-                .then(|| match T::from_str(&buf.trim()) {
+                .then(|| match T::from_str(buf.trim()) {
                     Ok(t) => Some(t),
                     Err(e) => {
                         eprintln!("{}:{}: {} for {:?}", file_name, line, e, buf.trim());
@@ -156,14 +156,14 @@ where
     <T as FromStr>::Err: Display,
 {
     buf.clear();
-    while buf.is_empty() || !is_new_field(&buf) {
+    while buf.is_empty() || !is_new_field(buf) {
         *line += 1;
         if reader.read_line(buf).ok()? == 0 {
             break;
         }
     }
     (!buf.is_empty())
-        .then(|| match T::from_str(&buf) {
+        .then(|| match T::from_str(buf) {
             Ok(t) => Some(t),
             Err(e) => {
                 eprintln!("{}:{}: {} for {:?}", file_name, *line - 1, e, buf);

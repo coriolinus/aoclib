@@ -21,7 +21,7 @@ pub trait DisplayWidth {
 /// Created with [`DisplayWidth::chunks`]. Never heap-allocates if `T::DISPLAY_WIDTH <= CHUNK_WIDTH`.
 pub struct Chunks<'a, T: ?Sized>(std::str::Chars<'a>, PhantomData<T>);
 
-impl<'a, T: DisplayWidth> Iterator for Chunks<'a, T> {
+impl<T: DisplayWidth> Iterator for Chunks<'_, T> {
     // 4 bytes in a max-width char
     type Item = SmallString<[u8; 4 * CHUNK_WIDTH]>;
 
@@ -54,18 +54,15 @@ pub trait ToRgb {
     parse_display::Display,
     parse_display::FromStr,
 )]
+#[derive(Default)]
 pub enum Bool {
     #[display("#")]
     True,
     #[display(".")]
+    #[default]
     False,
 }
 
-impl Default for Bool {
-    fn default() -> Self {
-        Bool::False
-    }
-}
 
 impl DisplayWidth for Bool {
     const DISPLAY_WIDTH: usize = 1;
@@ -151,7 +148,7 @@ impl TryFrom<u8> for Digit {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        (value < 10).then(move || Digit(value)).ok_or(())
+        (value < 10).then_some(Digit(value)).ok_or(())
     }
 }
 
@@ -197,7 +194,7 @@ impl TryFrom<u8> for TwoDigits {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        (value < 100).then(move || TwoDigits(value)).ok_or(())
+        (value < 100).then_some(TwoDigits(value)).ok_or(())
     }
 }
 
